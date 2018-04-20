@@ -42,7 +42,7 @@ template <typename T>
 class Quadrotor : public systems::Diagram<T> {
  public:
   Quadrotor() {
-    this->set_name("Quadrotor");
+    this->set_name("Quadrotor");                                        // this again
 
     auto tree = std::make_unique<RigidBodyTree<T>>();
     ModelInstanceIdTable model_id_table = AddModelInstanceFromUrdfFileToWorld(
@@ -75,7 +75,7 @@ class Quadrotor : public systems::Diagram<T> {
 
   void SetDefaultState(const systems::Context<T>& context,
                        systems::State<T>* state) const override {
-    DRAKE_DEMAND(state != nullptr);
+    DRAKE_DEMAND(state != nullptr);                                     // what is DRAKE_DEMAND? nullptr?
     systems::Diagram<T>::SetDefaultState(context, state);
     systems::State<T>& plant_state =
         this->GetMutableSubsystemState(*plant_, state);
