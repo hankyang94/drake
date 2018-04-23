@@ -191,34 +191,32 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
   Vector3<T> gyro_3(cos(tilt_angle(2)), 0, -sin(tilt_angle(2)));
   Vector3<T> gyro_4(cos(tilt_angle(3)), 0, -sin(tilt_angle(3)));
   VectorX<T> prop_speed = prop_speed2.sqrt();
-
-
-
-
-
-
-  VectorX<T> uM = kM_ * u;
-
-
-  Vector3<T> F(0, 0, uF.sum());
-  Vector3<T> M(L_ * (uF(1) - uF(3)), L_ * (uF(2) - uF(0)),
-               uM(0) - uM(1) + uM(2) - uM(3));
-
-  // Computing the resultant linear acceleration due to the forces.
-  Vector3<T> xyz_ddot = (1.0 / m_) * (Fg + R * F);
-
-  Vector3<T> pqr;
-  rpydot2angularvel(rpy, rpy_dot, pqr);
-  pqr = R.adjoint() * pqr;
+  Matrix3d E << 1, 0, -sin(rpy(1)),
+                0, cos(rpy(0)), sin(rpy(0))*cos(rpy(1)),
+                0, -sin(rpy(0)), cos(rpy(0))*cos(rpy(1));
+  Vector3<T> pqr = E*rpy_dot;
+  Vector3<T> M_gyro(0,0,0);
+  Vector3<T> gyro(0,0,0);
+  for (int i=0; i<4; i++) {
+      gyro << cos(tilt_angle(i)), 0, -sin(tilt_angle(i));
+      if i == 0 or i == 3 { double eta = 1; }
+      else {double eta = -1; }
+      M_gyro += J_prop_ * eta * prop_speed(i) * pqr.cross(gyro);
+      }
+  M_t = M_th + M_w + M_gyro;
+  
+  //~ Vector3<T> pqr;
+  //~ rpydot2angularvel(rpy, rpy_dot, pqr);
+  //~ pqr = R.adjoint() * pqr;
 
   // Computing the resultant angular acceleration due to the moments.
-  Vector3<T> pqr_dot = I_.ldlt().solve(M - pqr.cross(I_ * pqr));
+  Vector3<T> pqr_dot = I_.ldlt().solve(M_t - pqr.cross(I_ * pqr)); // this is equal to saying I_*pqr_dot = M - pqr.cross(I_ * pqr)
   Matrix3<T> Phi;
   typename drake::math::Gradient<Matrix3<T>, 3>::type dPhi;
   typename drake::math::Gradient<Matrix3<T>, 3, 2>::type* ddPhi = nullptr;
   angularvel2rpydotMatrix(rpy, Phi, &dPhi, ddPhi);
 
-  MatrixX<T> drpy2drotmat = drake::math::drpy2rotmat(rpy);
+  MatrixX<T> drpy2drotmat = drake::math::drpy2rotmat(rpy);              // not sure what algorithm is running here??
   VectorX<T> Rdot_vec(9);
   Rdot_vec = drpy2drotmat * rpy_dot;
   Matrix3<T> Rdot = Eigen::Map<Matrix3<T>>(Rdot_vec.data());
@@ -250,8 +248,11 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRController(
   x0.topRows(3) = nominal_position;
 
   // Nominal input corresponds to a hover.
-  Eigen::VectorXd u0 = Eigen::VectorXd::Constant(
-      4, quad_tilt_wing_plant->m() * quad_tilt_wing_plant->g() / 4);
+  Eigen::VectorXd u0_prop = Eigen::VectorXd::Constant(
+      4, quad_tilt_wing_plant->m() * quad_tilt_wing_plant->g() / 4 / quad_tilt_wing_plant->kProp());
+  Eigen::VectorXd u0_tilt = Eigen::VectorXd::Constant(4, M_PI/2);
+  
+  Eigen::VectorXd u0 << u0_prop, u0_tilt;
 
   quad_tilt_wing_context_goal->FixInputPort(0, u0);
   quad_tilt_wing_plant->set_state(quad_tilt_wing_context_goal.get(), x0);              //where is the linearization part?
@@ -261,7 +262,7 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRController(
   Eigen::MatrixXd Q = Eigen::MatrixXd::Identity(12, 12);
   Q.topLeftCorner<6, 6>() = 10 * Eigen::MatrixXd::Identity(6, 6);
 
-  Eigen::Matrix4d R = Eigen::Matrix4d::Identity();
+  Eigen::MatrixXd R = Eigen::MatrixXd::Identity(8, 8);
 
   return systems::controllers::LinearQuadraticRegulator(
       *quad_tilt_wing_plant, *quad_tilt_wing_context_goal, Q, R);

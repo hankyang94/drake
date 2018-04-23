@@ -41,6 +41,7 @@ class QuadTiltWingPlant final : public systems::LeafSystem<T> {                /
 
   double m() const { return m_; }
   double g() const { return g_; }
+  double kProp() const { return kProp_; }
 
  protected:
   void CopyStateOut(const systems::Context<T>& context,
