@@ -69,6 +69,7 @@ class QuadTiltWingPlant final : public systems::LeafSystem<T> {                /
   static constexpr int kInputDimension{8};
 
   // TODO(naveenoid): Declare these as parameters in the context.
+  const double rho_;         // density of the air 1.225kg/m^3
   const double g_;           // Gravitational acceleration (m/s^2).
   const double m_;           // Mass of the robot (kg).
   const double rear_joint_x_; // x coordinate of the rear rotational joint

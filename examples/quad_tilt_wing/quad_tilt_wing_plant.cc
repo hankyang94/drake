@@ -1,6 +1,7 @@
 #include "drake/examples/quad_tilt_wing/quad_tilt_wing_plant.h"
 
 #include <memory>
+#include <math.h>
 
 #include "drake/common/default_scalars.h"
 #include "drake/math/gradient.h"
@@ -48,7 +49,7 @@ QuadTiltWingPlant<T>::QuadTiltWingPlant(double m_arg, double rear_joint_x_arg,
                                   double kProp_arg, double kLambda_arg)
     : systems::LeafSystem<T>(
           systems::SystemTypeTag<quad_tilt_wing::QuadTiltWingPlant>{}),
-      g_{9.81}, m_(m_arg), rear_joint_x_(rear_joint_x_arg), front_joint_x_(front_joint_x_arg),
+      rho_{1.225}, g_{9.81}, m_(m_arg), rear_joint_x_(rear_joint_x_arg), front_joint_x_(front_joint_x_arg),
       rear_wing_len_(rear_wing_len_arg), rear_wing_wid_(rear_wing_wid_arg), front_wing_len_(front_wing_len_arg),
       front_wing_wid_(front_wing_wid_arg), front_prop_y_(front_prop_y_arg), rear_prop_y_(rear_prop_y_arg),
       kProp_(kProp_arg), kLambda_(kLambda_arg), I_(I_arg) {
@@ -81,22 +82,62 @@ template <typename T>
 void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
     const systems::Context<T> &context,
     systems::ContinuousState<T> *derivatives) const {
+        // state = [X,Y,Z,phi,theta,psi,dot_X,dot_Y,dot_Z,dot_phi,dot_theta,dot_psi]
   VectorX<T> state = context.get_continuous_state_vector().CopyToVector();
-
+        // u = [omega_1^2, omega_2^2, omega_3^2, omega_4^2, theta_1, theta_2, theta_3, theta_4]
   VectorX<T> u = this->EvalVectorInput(context, 0)->get_value();        // get value from the input port, which is the controller
 
-  // Extract orientation and angular velocities.
+  // Extract orientation, angular velocities and linear velocities.
   Vector3<T> rpy = state.segment(3, 3);
   Vector3<T> rpy_dot = state.segment(9, 3);
+  Vector3<T> xyz_dot = state.segment(6, 3);
+  VectorX<T> prop_speed2 = u.segment(0,4);  // omega_1^2, omega_2^2, omega_3^2, omega_4^2
+  VectorX<T> tilt_angle = u.segment(4,4);   // theta_1, theta_2, theta_3, theta_4
 
   // Convert orientation to a rotation matrix.
   Matrix3<T> R = drake::math::rpy2rotmat(rpy);
-
-  // Compute the net input forces and moments.
-  VectorX<T> uF = kF_ * u;
+  
+  /////////// Compute forces /////////////////////
+  // Compute the propeller net forces.
+  VectorX<T> uF = kProp_ * prop_speed2;
+  // Compute force rotational matrix due to wing tilting
+  Eigen::Matrix<double, 3, 4> thrust_rot;
+  thrust_rot << cos(tilt_angle(0)), cos(tilt_angle(1)), cos(tilt_angle(2)), cos(tilt_angle(3)),
+                0, 0, 0, 0,
+                -sin(tilt_angle(0)), -sin(tilt_angle(1)), -sin(tilt_angle(2)), -sin(tilt_angle(3));
+  Vector3<T> F_th = thrust_rot*uF;
+  
+  //// Compute aerodynamic forces
+  double front_wing_A = front_wing_len_*front_wing_wid_;
+  double rear_wing_A = rear_wing_len_*rear_wing_wid_;
+  double xz_speed2 = pow(xyz_dot(2), 2) + pow(xyz_dot(0), 2);
+  // compute angle of attack
+  VectorX<T> angle_of_attack = tilt_angle + atan2(xyz_dot(2), xyz_dot(0));  //alpha = theta + arctan(v_z, v_x)
+  VectorX<T> lift_coef = 2*angle_of_attack.sin()*angle_of_attack.cos();
+  VectorX<T> drag_coef = 2*angle_of_attack.sin().square();
+  // compute and add forces from each wing
+  Vector3<T> F_w(0,0,0);
+  for (int i = 0; i<4; i++) {
+      double A;
+      if i<2 { A = front_wing_A; }
+      else { A = rear_wing_A }
+      Vector3<T> w_coef << drag_coef(i), 0, lift_coef(i);
+      Vector3<T> w_rot_rpy(0, angle_of_attack(i)-tilt_angle(i), 0);
+      Matrix3d w_rotmat = drake::math::rpy2rotmat(w_rot_rpy);
+      F_w += w_rotmat*w_coef*(-0.5)*rho_*A*xz_speed2;
+      }
+  // compute the resultant linear acceleration due to the forces
+  Vector3<T> Fg(0, 0, -m_ * g_);
+  Vector3<T> xyz_ddot = (1.0 / m_)*(Fg + R*(F_th+F_w))
+  
+  //////// Compute moment /////////////////////////
+  
+  
+  
+  
   VectorX<T> uM = kM_ * u;
 
-  Vector3<T> Fg(0, 0, -m_ * g_);
+  
   Vector3<T> F(0, 0, uF.sum());
   Vector3<T> M(L_ * (uF(1) - uF(3)), L_ * (uF(2) - uF(0)),
                uM(0) - uM(1) + uM(2) - uM(3));
