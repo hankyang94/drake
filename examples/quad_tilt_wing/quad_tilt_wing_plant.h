@@ -86,6 +86,7 @@ class QuadTiltWingPlant final : public systems::LeafSystem<T> {                /
   const double kProp_;         // thrust = kProp_*omega^2
   const double kLambda_;       // Torque-to-thrust ratio
   const Eigen::Matrix3d I_;  // Moment of Inertia about the Center of Mass
+  const double J_prop_;
 };
 
 /// Generates an LQR controller to move to @p nominal_position. Internally
