@@ -8,50 +8,67 @@
 #include "drake/systems/controllers/linear_quadratic_regulator.h"
 #include "drake/util/drakeGeometryUtil.h"
 
-using Eigen::Matrix3d;                                                  
-                                                                        
+using Eigen::Matrix3d;
+
 namespace drake {
 namespace examples {
 namespace quad_tilt_wing {
 
 namespace {
-Matrix3d default_moment_of_inertia() {                                  
-  return (Eigen::Matrix3d() <<  // BR                                   
-          0.0023, 0, 0,  // BR
-          0, 0.0023, 0,  // BR
-          0, 0, 0.0040).finished();                                     
+Matrix3d default_moment_of_inertia() {
+  return (Eigen::Matrix3d() <<  // BR
+          0.03504, 0, 0,  // BR
+          0, 0.02011, 0,  // BR
+          0, 0, 0.05504).finished();
 }
 }  // namespace
 
 template <typename T>
-QuadTiltWingPlant<T>::QuadTiltWingPlant()                                     
-    : QuadTiltWingPlant(0.5,    // m (kg)
-                     0.175,  // L (m)
+QuadTiltWingPlant<T>::QuadTiltWingPlant()
+    : QuadTiltWingPlant(0.91,    // m (kg)
+                     0.209,  // rear_joint_x (m)
+                     0.286,  // front_joint_x (m)
+                     0.5,    // rear_wing_len (m)
+                     0.15,   // rear_wing_wid (m)
+                     0.25,   // front_wing_len (m)
+                     0.1,    // front_wing_wid (m)
+                     0.156,  // front_prop_y (m)
+                     0.245,  // rear_prop_y (m)
                      default_moment_of_inertia(),
-                     1.0,    // kF
-                     0.0245  // kM
+                     5e-6,    // kProp
+                     0.1  // kLambda
                      ) {}
 
 template <typename T>
-QuadTiltWingPlant<T>::QuadTiltWingPlant(double m_arg, double L_arg,
-                                  const Matrix3d& I_arg, double kF_arg,
-                                  double kM_arg)
-    : systems::LeafSystem<T>(                                           
+QuadTiltWingPlant<T>::QuadTiltWingPlant(double m_arg, double rear_joint_x_arg,
+                                  double front_joint_x_arg, double rear_wing_len_arg,
+                                  double rear_wing_wid_arg, double front_wing_len_arg,
+                                  double front_wing_wid_arg, double front_prop_y_arg,
+                                  double rear_prop_y_arg, const Matrix3d& I_arg,
+                                  double kProp_arg, double kLambda_arg)
+    : systems::LeafSystem<T>(
           systems::SystemTypeTag<quad_tilt_wing::QuadTiltWingPlant>{}),
-      g_{9.81}, m_(m_arg), L_(L_arg), kF_(kF_arg), kM_(kM_arg), I_(I_arg) {
+      g_{9.81}, m_(m_arg), rear_joint_x_(rear_joint_x_arg), front_joint_x_(front_joint_x_arg),
+      rear_wing_len_(rear_wing_len_arg), rear_wing_wid_(rear_wing_wid_arg), front_wing_len_(front_wing_len_arg),
+      front_wing_wid_(front_wing_wid_arg), front_prop_y_(front_prop_y_arg), rear_prop_y_(rear_prop_y_arg),
+      kProp_(kProp_arg), kLambda_(kLambda_arg), I_(I_arg) {
   this->DeclareInputPort(systems::kVectorValued, kInputDimension);
-  this->DeclareContinuousState(kStateDimension);                            
-  this->DeclareVectorOutputPort(systems::BasicVector<T>(kStateDimension), 
+  this->DeclareContinuousState(kStateDimension);
+  this->DeclareVectorOutputPort(systems::BasicVector<T>(kStateDimension),
                                 &QuadTiltWingPlant::CopyStateOut);
 }
 
 template <typename T>
 template <typename U>
 QuadTiltWingPlant<T>:: QuadTiltWingPlant(const QuadTiltWingPlant<U>& other)
-    : QuadTiltWingPlant<T>(other.m_, other.L_, other.I_, other.kF_, other.kM_) {}  // this is just a copy constructor
+    : QuadTiltWingPlant<T>(other.m_, other.rear_joint_x_, other.front_joint_x_,
+                           other.rear_wing_len_, other.rear_wing_wid_,
+                           other.front_wing_len_, other.front_wing_wid_,
+                           other.front_prop_y_, other.rear_prop_y_,
+                           other.kProp_, other.kLambda_) {}  // this is just a copy constructor
 
 template <typename T>
-QuadTiltWingPlant<T>::~QuadTiltWingPlant() {}                                 
+QuadTiltWingPlant<T>::~QuadTiltWingPlant() {}
 
 template <typename T>
 void QuadTiltWingPlant<T>::CopyStateOut(const systems::Context<T> &context,
@@ -63,7 +80,7 @@ void QuadTiltWingPlant<T>::CopyStateOut(const systems::Context<T> &context,
 template <typename T>
 void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
     const systems::Context<T> &context,
-    systems::ContinuousState<T> *derivatives) const {                   
+    systems::ContinuousState<T> *derivatives) const {
   VectorX<T> state = context.get_continuous_state_vector().CopyToVector();
 
   VectorX<T> u = this->EvalVectorInput(context, 0)->get_value();        // get value from the input port, which is the controller
@@ -76,7 +93,7 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
   Matrix3<T> R = drake::math::rpy2rotmat(rpy);
 
   // Compute the net input forces and moments.
-  VectorX<T> uF = kF_ * u;                                              
+  VectorX<T> uF = kF_ * u;
   VectorX<T> uM = kM_ * u;
 
   Vector3<T> Fg(0, 0, -m_ * g_);
@@ -124,7 +141,7 @@ constexpr int QuadTiltWingPlant<T>::kInputDimension;
 std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRController(
     const QuadTiltWingPlant<double>* quad_tilt_wing_plant,
     Eigen::Vector3d nominal_position) {
-  auto quad_tilt_wing_context_goal = quad_tilt_wing_plant->CreateDefaultContext();     
+  auto quad_tilt_wing_context_goal = quad_tilt_wing_plant->CreateDefaultContext();
 
   Eigen::VectorXd x0 = Eigen::VectorXd::Zero(12);
   x0.topRows(3) = nominal_position;

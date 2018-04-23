@@ -18,27 +18,27 @@ namespace quad_tilt_wing {
 template <typename T>
 class QuadTiltWingPlant final : public systems::LeafSystem<T> {                // QuadTiltWingPlant derives from systems::LeafSystem
  public:                                                                    // final means cannot override
-  QuadTiltWingPlant();
-  QuadTiltWingPlant(double m_arg, double rear_joint_x_arg, 
+  QuadTiltWingPlant();            // class constructor
+  QuadTiltWingPlant(double m_arg, double rear_joint_x_arg,
                     double front_joint_x_arg, double rear_wing_len_arg, double rear_wing_wid_arg,
                     double front_wing_len_arg, double front_wing_wid_arg, double front_prop_y_arg,
-                    double rear_prop_y_arg, const Eigen::Matrix3d& I_arg,  
+                    double rear_prop_y_arg, const Eigen::Matrix3d& I_arg,
                     double kProp_arg, double kLambda_arg);
 
   /// Scalar-converting copy constructor.  See @ref system_scalar_conversion.
-  template <typename U>                                                      
-  explicit QuadTiltWingPlant(const QuadTiltWingPlant<U>&);                         
-                                                                            
-  ~QuadTiltWingPlant() override;
+  template <typename U>
+  explicit QuadTiltWingPlant(const QuadTiltWingPlant<U>&);
+
+  ~QuadTiltWingPlant() override;        // class destructor
 
   int get_input_size() const { return kInputDimension; }
 
   int get_num_states() const { return kStateDimension; }
 
   void set_state(systems::Context<T>* context, const VectorX<T>& x) const {
-    context->get_mutable_continuous_state_vector().SetFromVector(x);            
-  }                                                                     
-                                                                        
+    context->get_mutable_continuous_state_vector().SetFromVector(x);
+  }
+
   double m() const { return m_; }
   double g() const { return g_; }
 
@@ -63,8 +63,8 @@ class QuadTiltWingPlant final : public systems::LeafSystem<T> {                /
 
  private:
   // Allow different specializations to access each other's private data.
-  template <typename> friend class QuadTiltWingPlant;                      
-                                                                        
+  template <typename> friend class QuadTiltWingPlant;
+
   static constexpr int kStateDimension{12};
   static constexpr int kInputDimension{8};
 
