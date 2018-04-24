@@ -35,8 +35,9 @@ namespace examples {
 namespace quad_tilt_wing {
 namespace {
 
-DEFINE_double(duration, 0.5, "Total duration of simulation.");
-DEFINE_double(initial_height, 0.51, "Initial height of the quad tilt-wing.");
+DEFINE_double(duration, 1, "Total duration of simulation.");
+DEFINE_double(initial_height, 10.0, "Initial height of the quad tilt-wing.");
+DEFINE_double(realtime_rate, 0.1, "Rate at which to run the simulation, relative to realtime.");
 
 template <typename T>
 class QuadTiltWing : public systems::Diagram<T> {
@@ -47,11 +48,11 @@ class QuadTiltWing : public systems::Diagram<T> {
     auto tree = std::make_unique<RigidBodyTree<T>>();
     ModelInstanceIdTable model_id_table = AddModelInstanceFromUrdfFileToWorld(
         FindResourceOrThrow("drake/examples/quad_tilt_wing/quad_tilt_wing.urdf"),
-        kFixed, tree.get());
+        kRollPitchYaw, tree.get());
     const int quad_tilt_wing_id = model_id_table.at("quad_tilt_wing");  // "quad_tilt_wing" is the name defined in urdf file
-    //~ AddModelInstancesFromSdfFile(
-        //~ FindResourceOrThrow("drake/examples/quad_tilt_wing/warehouse.sdf"),
-        //~ kFixed, nullptr /* weld to frame */, tree.get());
+    AddModelInstancesFromSdfFile(
+        FindResourceOrThrow("drake/examples/quad_tilt_wing/warehouse.sdf"),
+        kFixed, nullptr /* weld to frame */, tree.get());
     //~ drake::multibody::AddFlatTerrainToWorld(tree.get());
 
     systems::DiagramBuilder<T> builder;
@@ -104,6 +105,7 @@ int do_main(int argc, char* argv[]) {
   const double max_step_size = 1e-3;
   simulator.reset_integrator<systems::RungeKutta2Integrator<double>>(
       model, max_step_size, &simulator.get_mutable_context());
+  simulator.set_target_realtime_rate(FLAGS_realtime_rate);
   simulator.Initialize();
   simulator.StepTo(FLAGS_duration);
   return 0;

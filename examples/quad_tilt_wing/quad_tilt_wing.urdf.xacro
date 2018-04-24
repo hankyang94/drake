@@ -36,6 +36,11 @@
   
 
   <link name="fuselage">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
     <visual>
       <geometry>
         <box size="${fuselage_length} ${fuselage_height} ${fuselage_height}"/>
@@ -45,6 +50,11 @@
   </link>
   
   <link name="wing_1_rod">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
     <visual>
       <geometry>
         <cylinder length="${wing_rod_length_front}" radius="${wing_rod_radius}"/>
@@ -63,6 +73,11 @@
   </joint>
   
   <link name="wing_1_wing">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
     <visual>
       <geometry>
         <box size="${wing_wing_width} ${wing_wing_length_front} ${wing_wing_thickness}"/>
@@ -79,6 +94,11 @@
   </joint>
   
   <link name="wing_1_motor">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
     <visual>
       <geometry>
         <cylinder length="${motor_length}" radius="${motor_radius}"/>
@@ -95,6 +115,11 @@
   </joint>
   
   <link name="wing_1_prop">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
     <visual>
       <geometry>
         <cylinder length="${prop_disk_thickness}" radius="${prop_disk_radius}"/>
@@ -111,6 +136,11 @@
   </joint>
   
   <link name="wing_2_rod">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
     <visual>
       <geometry>
         <cylinder length="${wing_rod_length_front}" radius="${wing_rod_radius}"/>
@@ -129,6 +159,11 @@
   </joint>
   
   <link name="wing_2_wing">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
     <visual>
       <geometry>
         <box size="${wing_wing_width} ${wing_wing_length_front} ${wing_wing_thickness}"/>
@@ -145,6 +180,11 @@
   </joint>
   
   <link name="wing_2_motor">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
     <visual>
       <geometry>
         <cylinder length="${motor_length}" radius="${motor_radius}"/>
@@ -161,6 +201,11 @@
   </joint>
   
   <link name="wing_2_prop">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
     <visual>
       <geometry>
         <cylinder length="${prop_disk_thickness}" radius="${prop_disk_radius}"/>
@@ -177,6 +222,11 @@
   </joint>
   
   <link name="wing_3_rod">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
     <visual>
       <geometry>
         <cylinder length="${wing_rod_length_rear}" radius="${wing_rod_radius}"/>
@@ -195,6 +245,11 @@
   </joint>
   
   <link name="wing_3_wing">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
     <visual>
       <geometry>
         <box size="${wing_wing_width} ${wing_wing_length_rear} ${wing_wing_thickness}"/>
@@ -211,6 +266,11 @@
   </joint>
   
   <link name="wing_3_motor">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
     <visual>
       <geometry>
         <cylinder length="${motor_length}" radius="${motor_radius}"/>
@@ -227,6 +287,11 @@
   </joint>
   
   <link name="wing_3_prop">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
     <visual>
       <geometry>
         <cylinder length="${prop_disk_thickness}" radius="${prop_disk_radius}"/>
@@ -243,6 +308,11 @@
   </joint>
   
   <link name="wing_4_rod">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
     <visual>
       <geometry>
         <cylinder length="${wing_rod_length_rear}" radius="${wing_rod_radius}"/>
@@ -261,6 +331,11 @@
   </joint>
   
   <link name="wing_4_wing">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
     <visual>
       <geometry>
         <box size="${wing_wing_width} ${wing_wing_length_rear} ${wing_wing_thickness}"/>
@@ -277,6 +352,11 @@
   </joint>
   
   <link name="wing_4_motor">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
     <visual>
       <geometry>
         <cylinder length="${motor_length}" radius="${motor_radius}"/>
@@ -293,6 +373,11 @@
   </joint>
   
   <link name="wing_4_prop">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
     <visual>
       <geometry>
         <cylinder length="${prop_disk_thickness}" radius="${prop_disk_radius}"/>
