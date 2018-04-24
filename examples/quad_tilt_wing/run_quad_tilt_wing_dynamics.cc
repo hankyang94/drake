@@ -42,12 +42,12 @@ template <typename T>
 class QuadTiltWing : public systems::Diagram<T> {
  public:
   QuadTiltWing() {
-    this->set_name("QuadTiltWing");                                        
+    this->set_name("QuadTiltWing");
 
     auto tree = std::make_unique<RigidBodyTree<T>>();
     ModelInstanceIdTable model_id_table = AddModelInstanceFromUrdfFileToWorld(
         FindResourceOrThrow("drake/examples/quad_tilt_wing/quad_tilt_wing.urdf"),
-        kRollPitchYaw, tree.get());
+        kFixed, tree.get());
     const int quad_tilt_wing_id = model_id_table.at("quad_tilt_wing");  // "quad_tilt_wing" is the name defined in urdf file
     //~ AddModelInstancesFromSdfFile(
         //~ FindResourceOrThrow("drake/examples/quad_tilt_wing/warehouse.sdf"),
