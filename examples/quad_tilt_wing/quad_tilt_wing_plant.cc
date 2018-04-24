@@ -114,7 +114,7 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
   // compute angle of attack
   VectorX<T> angle_of_attack = (tilt_angle.array() + atan2(xyz_dot(2), xyz_dot(0))).matrix();  //alpha = theta + arctan(v_z, v_x)
   VectorX<T> lift_coef = (2*angle_of_attack.array().sin()*angle_of_attack.array().cos()).matrix();
-  VectorX<T> drag_coef = 2*(angle_of_attack.array().sin().square()).matrix();
+  VectorX<T> drag_coef = 2*(angle_of_attack.array().sin().square()).matrix(); // convert between array and matrix, because only array supports element wise operations
   // compute and add forces from each wing
   /*
   Vector3<T> F_w(0,0,0);
