@@ -35,9 +35,9 @@ QuadTiltWingPlant<T>::QuadTiltWingPlant()
                      0.1,    // front_wing_wid (m)
                      0.156,  // front_prop_y (m)
                      0.245,  // rear_prop_y (m)
-                     default_moment_of_inertia(),
                      5e-6,    // kProp
-                     0.1  // kLambda
+                     0.1,  // kLambda
+                     default_moment_of_inertia()
                      ) {}
 
 template <typename T>
@@ -45,14 +45,14 @@ QuadTiltWingPlant<T>::QuadTiltWingPlant(double m_arg, double rear_joint_x_arg,
                                   double front_joint_x_arg, double rear_wing_len_arg,
                                   double rear_wing_wid_arg, double front_wing_len_arg,
                                   double front_wing_wid_arg, double front_prop_y_arg,
-                                  double rear_prop_y_arg, const Matrix3d& I_arg,
-                                  double kProp_arg, double kLambda_arg)
+                                  double rear_prop_y_arg, double kProp_arg, double kLambda_arg,
+                                  const Matrix3d& I_arg)
     : systems::LeafSystem<T>(
           systems::SystemTypeTag<quad_tilt_wing::QuadTiltWingPlant>{}),
-      rho_{1.225}, g_{9.81}, m_(m_arg), rear_joint_x_(rear_joint_x_arg), front_joint_x_(front_joint_x_arg),
+      rho_{1.225}, g_{9.81}, J_prop_{5e-5}, m_(m_arg), rear_joint_x_(rear_joint_x_arg), front_joint_x_(front_joint_x_arg),
       rear_wing_len_(rear_wing_len_arg), rear_wing_wid_(rear_wing_wid_arg), front_wing_len_(front_wing_len_arg),
       front_wing_wid_(front_wing_wid_arg), front_prop_y_(front_prop_y_arg), rear_prop_y_(rear_prop_y_arg),
-      kProp_(kProp_arg), kLambda_(kLambda_arg), I_(I_arg), J_prop_{5e-5} {
+      kProp_(kProp_arg), kLambda_(kLambda_arg), I_(I_arg) {
   this->DeclareInputPort(systems::kVectorValued, kInputDimension);
   this->DeclareContinuousState(kStateDimension);
   this->DeclareVectorOutputPort(systems::BasicVector<T>(kStateDimension),
@@ -66,7 +66,7 @@ QuadTiltWingPlant<T>:: QuadTiltWingPlant(const QuadTiltWingPlant<U>& other)
                            other.rear_wing_len_, other.rear_wing_wid_,
                            other.front_wing_len_, other.front_wing_wid_,
                            other.front_prop_y_, other.rear_prop_y_,
-                           other.kProp_, other.kLambda_) {}  // this is just a copy constructor
+                           other.kProp_, other.kLambda_, other.I_) {}  // this is just a copy constructor
 
 template <typename T>
 QuadTiltWingPlant<T>::~QuadTiltWingPlant() {}
@@ -101,7 +101,7 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
   // Compute the propeller net forces.
   VectorX<T> uF = kProp_ * prop_speed2;
   // Compute force rotational matrix due to wing tilting
-  Eigen::Matrix<double, 3, 4> thrust_rot;
+  Eigen::Matrix<T, 3, 4> thrust_rot;
   thrust_rot << cos(tilt_angle(0)), cos(tilt_angle(1)), cos(tilt_angle(2)), cos(tilt_angle(3)),
                 0, 0, 0, 0,
                 -sin(tilt_angle(0)), -sin(tilt_angle(1)), -sin(tilt_angle(2)), -sin(tilt_angle(3));
@@ -110,11 +110,11 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
   //// Compute aerodynamic forces
   double front_wing_A = front_wing_len_*front_wing_wid_;
   double rear_wing_A = rear_wing_len_*rear_wing_wid_;
-  double xz_speed2 = pow(xyz_dot(2), 2) + pow(xyz_dot(0), 2);
+  auto xz_speed2 = pow(xyz_dot(2), 2) + pow(xyz_dot(0), 2);
   // compute angle of attack
-  VectorX<T> angle_of_attack = tilt_angle + atan2(xyz_dot(2), xyz_dot(0));  //alpha = theta + arctan(v_z, v_x)
-  VectorX<T> lift_coef = 2*angle_of_attack.sin()*angle_of_attack.cos();
-  VectorX<T> drag_coef = 2*angle_of_attack.sin().square();
+  VectorX<T> angle_of_attack = (tilt_angle.array() + atan2(xyz_dot(2), xyz_dot(0))).matrix();  //alpha = theta + arctan(v_z, v_x)
+  VectorX<T> lift_coef = (2*angle_of_attack.array().sin()*angle_of_attack.array().cos()).matrix();
+  VectorX<T> drag_coef = 2*(angle_of_attack.array().sin().square()).matrix();
   // compute and add forces from each wing
   /*
   Vector3<T> F_w(0,0,0);
@@ -134,27 +134,27 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
   Vector3<T> w_coef_4(drag_coef(3), 0, lift_coef(3));
 
   Vector3<T> w_rot_rpy_1(0, angle_of_attack(0)-tilt_angle(0), 0);
-  Matrix3d w_rotmat_1 = drake::math::rpy2rotmat(w_rot_rpy_1);
+  Matrix3<T> w_rotmat_1 = drake::math::rpy2rotmat(w_rot_rpy_1);
   Vector3<T> w_rot_rpy_2(0, angle_of_attack(1)-tilt_angle(1), 0);
-  Matrix3d w_rotmat_2 = drake::math::rpy2rotmat(w_rot_rpy_2);
+  Matrix3<T> w_rotmat_2 = drake::math::rpy2rotmat(w_rot_rpy_2);
   Vector3<T> w_rot_rpy_3(0, angle_of_attack(2)-tilt_angle(2), 0);
-  Matrix3d w_rotmat_3 = drake::math::rpy2rotmat(w_rot_rpy_3);
+  Matrix3<T> w_rotmat_3 = drake::math::rpy2rotmat(w_rot_rpy_3);
   Vector3<T> w_rot_rpy_4(0, angle_of_attack(3)-tilt_angle(3), 0);
-  Matrix3d w_rotmat_4 = drake::math::rpy2rotmat(w_rot_rpy_4);
+  Matrix3<T> w_rotmat_4 = drake::math::rpy2rotmat(w_rot_rpy_4);
 
-  Vector3<T> F_w_1 = w_rotmat_1*w_coef_1*(-0.5)*rho_*A*xz_speed2;
-  Vector3<T> F_w_2 = w_rotmat_2*w_coef_2*(-0.5)*rho_*A*xz_speed2;
-  Vector3<T> F_w_3 = w_rotmat_3*w_coef_3*(-0.5)*rho_*A*xz_speed2;
-  Vector3<T> F_w_4 = w_rotmat_4*w_coef_4*(-0.5)*rho_*A*xz_speed2;
+  Vector3<T> F_w_1 = w_rotmat_1*w_coef_1*(-0.5)*rho_*front_wing_A*xz_speed2;
+  Vector3<T> F_w_2 = w_rotmat_2*w_coef_2*(-0.5)*rho_*front_wing_A*xz_speed2;
+  Vector3<T> F_w_3 = w_rotmat_3*w_coef_3*(-0.5)*rho_*rear_wing_A*xz_speed2;
+  Vector3<T> F_w_4 = w_rotmat_4*w_coef_4*(-0.5)*rho_*rear_wing_A*xz_speed2;
   Vector3<T> F_w = F_w_1+F_w_2+F_w_3+F_w_4;
 
   // compute the resultant linear acceleration due to the forces
   Vector3<T> Fg(0, 0, -m_ * g_);
-  Vector3<T> xyz_ddot = (1.0 / m_)*(Fg + R*(F_th+F_w))
+  Vector3<T> xyz_ddot = (1.0 / m_)*(Fg + R*(F_th+F_w));
 
   //////// Compute moment /////////////////////////
   // moment generated by props
-  Eigen::Matrix<double, 3, 4> moment_rot;
+  Eigen::Matrix<T, 3, 4> moment_rot;
   moment_rot(0,0) = front_prop_y_*sin(tilt_angle(0)) - kLambda_*cos(tilt_angle(0));
   moment_rot(0,1) = -front_prop_y_*sin(tilt_angle(1)) + kLambda_*cos(tilt_angle(1));
   moment_rot(0,2) = rear_prop_y_*sin(tilt_angle(2)) + kLambda_*cos(tilt_angle(2));
@@ -182,7 +182,7 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
   double r_l4 = r_l3;
   Vector3<T> M_w;
   M_w(0) = -r_s1*F_w_1(2) + r_s2*F_w_2(2) - r_s3*F_w_3(2) + r_s4*F_w_4(2);
-  M_w(1) = -r_l1*F_w_1(2) - r_l2*F_W_2(2) + r_l3*F_w_3(2) + r_l4*F_w_4(2);
+  M_w(1) = -r_l1*F_w_1(2) - r_l2*F_w_2(2) + r_l3*F_w_3(2) + r_l4*F_w_4(2);
   M_w(2) = r_s1*F_w_1(0) - r_s2*F_w_2(0) + r_s3*F_w_3(0) - r_s4*F_w_4(0);
 
   // moment generated by gyroscopic effects of the props
@@ -190,20 +190,22 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
   Vector3<T> gyro_2(cos(tilt_angle(1)), 0, -sin(tilt_angle(1)));
   Vector3<T> gyro_3(cos(tilt_angle(2)), 0, -sin(tilt_angle(2)));
   Vector3<T> gyro_4(cos(tilt_angle(3)), 0, -sin(tilt_angle(3)));
-  VectorX<T> prop_speed = prop_speed2.sqrt();
-  Matrix3d E << 1, 0, -sin(rpy(1)),
-                0, cos(rpy(0)), sin(rpy(0))*cos(rpy(1)),
-                0, -sin(rpy(0)), cos(rpy(0))*cos(rpy(1));
+  VectorX<T> prop_speed = prop_speed2.cwiseSqrt();
+  Matrix3<T> E;
+  E << 1, 0, -sin(rpy(1)),
+       0, cos(rpy(0)), sin(rpy(0))*cos(rpy(1)),
+       0, -sin(rpy(0)), cos(rpy(0))*cos(rpy(1));
   Vector3<T> pqr = E*rpy_dot;
   Vector3<T> M_gyro(0,0,0);
   Vector3<T> gyro(0,0,0);
+  double eta;
   for (int i=0; i<4; i++) {
       gyro << cos(tilt_angle(i)), 0, -sin(tilt_angle(i));
-      if i == 0 or i == 3 { double eta = 1; }
-      else {double eta = -1; }
+      if (i == 0 or i == 3) { eta = 1.0; }
+      else { eta = -1.0; }
       M_gyro += J_prop_ * eta * prop_speed(i) * pqr.cross(gyro);
       }
-  M_t = M_th + M_w + M_gyro;
+  Vector3<T> M_t = M_th + M_w + M_gyro;
   
   //~ Vector3<T> pqr;
   //~ rpydot2angularvel(rpy, rpy_dot, pqr);
@@ -252,7 +254,8 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRController(
       4, quad_tilt_wing_plant->m() * quad_tilt_wing_plant->g() / 4 / quad_tilt_wing_plant->kProp());
   Eigen::VectorXd u0_tilt = Eigen::VectorXd::Constant(4, M_PI/2);
   
-  Eigen::VectorXd u0 << u0_prop, u0_tilt;
+  Eigen::VectorXd u0;
+  u0 << u0_prop, u0_tilt;
 
   quad_tilt_wing_context_goal->FixInputPort(0, u0);
   quad_tilt_wing_plant->set_state(quad_tilt_wing_context_goal.get(), x0);              //where is the linearization part?

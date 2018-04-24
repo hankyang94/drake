@@ -22,8 +22,8 @@ class QuadTiltWingPlant final : public systems::LeafSystem<T> {                /
   QuadTiltWingPlant(double m_arg, double rear_joint_x_arg,
                     double front_joint_x_arg, double rear_wing_len_arg, double rear_wing_wid_arg,
                     double front_wing_len_arg, double front_wing_wid_arg, double front_prop_y_arg,
-                    double rear_prop_y_arg, const Eigen::Matrix3d& I_arg,
-                    double kProp_arg, double kLambda_arg);
+                    double rear_prop_y_arg, double kProp_arg, double kLambda_arg,
+                    const Eigen::Matrix3d& I_arg);
 
   /// Scalar-converting copy constructor.  See @ref system_scalar_conversion.
   template <typename U>
@@ -72,6 +72,7 @@ class QuadTiltWingPlant final : public systems::LeafSystem<T> {                /
   // TODO(naveenoid): Declare these as parameters in the context.
   const double rho_;         // density of the air 1.225kg/m^3
   const double g_;           // Gravitational acceleration (m/s^2).
+  const double J_prop_;
   const double m_;           // Mass of the robot (kg).
   const double rear_joint_x_; // x coordinate of the rear rotational joint
   const double front_joint_x_; // x coordinate of the front rotational joing
@@ -87,7 +88,6 @@ class QuadTiltWingPlant final : public systems::LeafSystem<T> {                /
   const double kProp_;         // thrust = kProp_*omega^2
   const double kLambda_;       // Torque-to-thrust ratio
   const Eigen::Matrix3d I_;  // Moment of Inertia about the Center of Mass
-  const double J_prop_;
 };
 
 /// Generates an LQR controller to move to @p nominal_position. Internally
