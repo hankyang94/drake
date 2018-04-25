@@ -58,8 +58,8 @@ drake_cc_binary(
 )
 
 drake_cc_binary(
-    name = "run_quad_tilt_wing_dynamics_real",
-    srcs = ["run_quad_tilt_wing_dynamics_real.cc"],
+    name = "run_quad_tilt_wing_arbitrary_controller",
+    srcs = ["run_quad_tilt_wing_arbitrary_controller.cc"],
     add_test_rule = 1,
     data = [":models"],
     test_rule_args = [

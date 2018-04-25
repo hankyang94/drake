@@ -206,7 +206,7 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
       M_gyro += J_prop_ * eta * prop_speed(i) * pqr.cross(gyro);
       }
   Vector3<T> M_t = M_th + M_w + M_gyro;
-  
+
   //~ Vector3<T> pqr;
   //~ rpydot2angularvel(rpy, rpy_dot, pqr);
   //~ pqr = R.adjoint() * pqr;
@@ -253,7 +253,7 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRController(
   Eigen::VectorXd u0_prop = Eigen::VectorXd::Constant(
       4, quad_tilt_wing_plant->m() * quad_tilt_wing_plant->g() / 4 / quad_tilt_wing_plant->kProp());
   Eigen::VectorXd u0_tilt = Eigen::VectorXd::Constant(4, M_PI/2);
-  
+
   Eigen::VectorXd u0;
   u0 << u0_prop, u0_tilt;
 
@@ -273,12 +273,26 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRController(
 
 std::unique_ptr<systems::AffineSystem<double>> ArbitraryController(
     const QuadTiltWingPlant<double>* quad_tilt_wing_plant) {
-        double kNumOfInputs = quad_tilt_wing_plant->get_input_size();
-        VectorX<double> arbitrary_input(kNumOfInputs);
-        arbitrary_input << 0.0, 0.0, 0.0, 0.0, M_PI/2, M_PI/2, M_PI/2, M_PI/2;
-        
-        return arbitrary_input;
-        }
+    int num_inputs = quad_tilt_wing_plant->get_num_states();
+    int num_outputs = quad_tilt_wing_plant->get_input_size();
+    int num_states = 1;
+    Eigen::MatrixXd A(num_states, num_states);
+    Eigen::MatrixXd B(num_states, num_inputs);
+    Eigen::VectorXd f0(num_states);
+    Eigen::MatrixXd C(num_outputs, num_states);
+    Eigen::MatrixXd D(num_outputs, num_inputs);
+    Eigen::VectorXd y0(num_outputs);
+    y0.tail(4) << M_PI/2, M_PI/2, M_PI/2, M_PI/2;
+
+    return std::make_unique<systems::AffineSystem<double>>(
+          A,   // A
+          B,  // B
+          f0,   // xDot0
+          C,  // C
+          D,  // D
+          y0,                // y0
+          0.0);
+}
 
 }  // namespace quad_tilt_wing
 }  // namespace examples
