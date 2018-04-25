@@ -35,7 +35,7 @@ namespace examples {
 namespace quad_tilt_wing {
 namespace {
 
-DEFINE_double(duration, 1, "Total duration of simulation.");
+DEFINE_double(duration, 1.5, "Total duration of simulation.");
 DEFINE_double(initial_height, 10.0, "Initial height of the quad tilt-wing.");
 DEFINE_double(realtime_rate, 0.1, "Rate at which to run the simulation, relative to realtime.");
 

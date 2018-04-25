@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <math.h>
+#include <iostream>
 
 #include "drake/common/default_scalars.h"
 #include "drake/math/gradient.h"
@@ -84,8 +85,13 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
     systems::ContinuousState<T> *derivatives) const {
         // state = [X,Y,Z,phi,theta,psi,dot_X,dot_Y,dot_Z,dot_phi,dot_theta,dot_psi]
   VectorX<T> state = context.get_continuous_state_vector().CopyToVector();
+  
+  std::cout << "inside plant, x is:" << state << std::endl;
+  
         // u = [omega_1^2, omega_2^2, omega_3^2, omega_4^2, theta_1, theta_2, theta_3, theta_4]
   VectorX<T> u = this->EvalVectorInput(context, 0)->get_value();        // get value from the input port, which is the controller
+  
+  std::cout << "inside plant, u is:" << u << std::endl;
 
   // Extract orientation, angular velocities and linear velocities.
   Vector3<T> rpy = state.segment(3, 3);
@@ -231,6 +237,8 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
   // Recomposing the derivatives vector.
   VectorX<T> xdot(12);
   xdot << state.tail(6), xyz_ddot, rpy_ddot;
+  
+  std::cout << "inside plant, xdot is:" << xdot << std::endl;
 
   derivatives->SetFromVector(xdot);
 }
@@ -275,14 +283,13 @@ std::unique_ptr<systems::AffineSystem<double>> ArbitraryController(
     const QuadTiltWingPlant<double>* quad_tilt_wing_plant) {
     int num_inputs = quad_tilt_wing_plant->get_num_states();
     int num_outputs = quad_tilt_wing_plant->get_input_size();
-    int num_states = 1;
-    Eigen::MatrixXd A(num_states, num_states);
-    Eigen::MatrixXd B(num_states, num_inputs);
-    Eigen::VectorXd f0(num_states);
-    Eigen::MatrixXd C(num_outputs, num_states);
-    Eigen::MatrixXd D(num_outputs, num_inputs);
-    Eigen::VectorXd y0(num_outputs);
-    y0.tail(4) << M_PI/2, M_PI/2, M_PI/2, M_PI/2;
+    int num_states = 0;                                            //what does 0 mean here? initiate a matrix with 0 dimension?
+    Eigen::MatrixXd A = Eigen::MatrixXd::Zero(num_states, num_states);
+    Eigen::MatrixXd B = Eigen::MatrixXd::Zero(num_states, num_inputs);
+    Eigen::VectorXd f0 = Eigen::VectorXd::Zero(num_states);
+    Eigen::MatrixXd C = Eigen::MatrixXd::Zero(num_outputs, num_states);
+    Eigen::MatrixXd D = Eigen::MatrixXd::Zero(num_outputs, num_inputs);
+    Eigen::VectorXd y0 = Eigen::VectorXd::Zero(num_outputs);
 
     return std::make_unique<systems::AffineSystem<double>>(
           A,   // A

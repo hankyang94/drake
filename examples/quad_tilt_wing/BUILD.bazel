@@ -58,14 +58,14 @@ drake_cc_binary(
 )
 
 drake_cc_binary(
-    name = "run_quad_tilt_wing_arbitrary_controller",
-    srcs = ["run_quad_tilt_wing_arbitrary_controller.cc"],
+    name = "run_quad_tilt_wing_arbitrary_controller_test",
+    srcs = ["run_quad_tilt_wing_arbitrary_controller_test.cc"],
     add_test_rule = 1,
     data = [":models"],
     test_rule_args = [
-        "--duration=1.0",
-        "--initial_height=0.51",
-        "--realtime_rate=0.1",
+        "--simulation_trials=1",
+        "--simulation_real_time_rate=0.1",
+        "--trial_duration=1.0",
     ],
     test_rule_size = "medium",
     deps = [

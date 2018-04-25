@@ -7,6 +7,7 @@
 
 #include <gflags/gflags.h>
 
+#include "drake/examples/quad_tilt_wing/quad_tilt_wing_plant.h"
 #include "drake/common/find_resource.h"
 #include "drake/common/text_logging.h"
 #include "drake/lcm/drake_lcm.h"
@@ -49,7 +50,7 @@ class QuadTiltWing : public systems::Diagram<T> {
     ModelInstanceIdTable model_id_table = AddModelInstanceFromUrdfFileToWorld(
         FindResourceOrThrow("drake/examples/quad_tilt_wing/quad_tilt_wing.urdf"),
         kRollPitchYaw, tree.get());
-    const int quad_tilt_wing_id = model_id_table.at("quad_tilt_wing");  // "quad_tilt_wing" is the name defined in urdf file
+    //~ const int quad_tilt_wing_id = model_id_table.at("quad_tilt_wing");  // "quad_tilt_wing" is the name defined in urdf file
     //~ AddModelInstancesFromSdfFile(
         //~ FindResourceOrThrow("drake/examples/quad_tilt_wing/warehouse.sdf"),
         //~ kFixed, nullptr /* weld to frame */, tree.get());
@@ -57,9 +58,9 @@ class QuadTiltWing : public systems::Diagram<T> {
 
     systems::DiagramBuilder<T> builder;
     
-    auto plant_ = builder.AddSystem<QuadTiltWingPlant<double>>();
+    plant_ = builder.template AddSystem<QuadTiltWingPlant<double>>();
     plant_->set_name("quad_tilt_wing_plant");
-    auto controller = builder.AddSystem(ArbitraryController(plant_));
+    auto controller = builder.template AddSystem(ArbitraryController(plant_));
     controller->set_name("controller");
     
     //~ plant_ =
@@ -72,7 +73,7 @@ class QuadTiltWing : public systems::Diagram<T> {
 
     systems::DrakeVisualizer* publisher =
         builder.template AddSystem<systems::DrakeVisualizer>(
-            plant_->get_rigid_body_tree(), &lcm_);
+            *tree, &lcm_);
     
     builder.Connect(plant_->get_output_port(0), controller->get_input_port());
     builder.Connect(controller->get_output_port(), plant_->get_input_port(0));
@@ -81,32 +82,45 @@ class QuadTiltWing : public systems::Diagram<T> {
     builder.BuildInto(this);
   }
 
-  void SetDefaultState(const systems::Context<T>& context,
-                       systems::State<T>* state) const override {
-    DRAKE_DEMAND(state != nullptr);                                     // what is DRAKE_DEMAND? nullptr?
-    systems::Diagram<T>::SetDefaultState(context, state);
-    systems::State<T>& plant_state =
-        this->GetMutableSubsystemState(*plant_, state);
-    VectorX<T> x0(plant_->get_num_states());
+  //~ void SetDefaultState(const systems::Context<T>& context,
+                       //~ systems::State<T>* state) const override {
+    //~ DRAKE_DEMAND(state != nullptr);                                     // what is DRAKE_DEMAND? nullptr?
+    //~ systems::Diagram<T>::SetDefaultState(context, state);
+    //~ systems::State<T>& plant_state =
+        //~ this->GetMutableSubsystemState(*plant_, state);
+    //~ VectorX<T> x0(plant_->get_num_states());
+    //~ x0.setZero();
+    //~ /* x0 is the initial state where
+     //~ * x0(0), x0(1), x0(2) are the quad tilt-wing's x, y, z -states
+     //~ * x0(3), x0(4), x0(5) are the quad tilt-wing's Euler angles phi, theta, psi
+     //~ */
+    //~ x0(2) = FLAGS_initial_height;  // Sets arbitrary z-position.
+    //~ plant_->set_state_vector(&plant_state, x0);
+  //~ }
+  int get_plant_num_states() const { return plant_->get_num_states(); }
+  
+ private:
+  QuadTiltWingPlant<T>* plant_;
+  lcm::DrakeLcm lcm_;
+};
+
+int do_main(int argc, char* argv[]) {
+  gflags::ParseCommandLineFlags(&argc, &argv, true);
+  
+  QuadTiltWing<double> model;
+  systems::Simulator<double> simulator(model);
+  
+  VectorX<double> x0(model.get_plant_num_states());
     x0.setZero();
     /* x0 is the initial state where
      * x0(0), x0(1), x0(2) are the quad tilt-wing's x, y, z -states
      * x0(3), x0(4), x0(5) are the quad tilt-wing's Euler angles phi, theta, psi
      */
     x0(2) = FLAGS_initial_height;  // Sets arbitrary z-position.
-    plant_->set_state_vector(&plant_state, x0);
-  }
-
- private:
-  systems::RigidBodyPlant<T>* plant_{};
-  lcm::DrakeLcm lcm_;
-};
-
-int do_main(int argc, char* argv[]) {
-  gflags::ParseCommandLineFlags(&argc, &argv, true);
-
-  QuadTiltWing<double> model;
-  systems::Simulator<double> simulator(model);
+  
+  simulator.get_mutable_context()
+        .get_mutable_continuous_state_vector()
+        .SetFromVector(x0);
 
   // Same as the nominal step size, since we're using a fixed step integrator.
   const double max_step_size = 1e-3;
