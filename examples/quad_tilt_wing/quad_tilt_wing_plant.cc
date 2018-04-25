@@ -271,6 +271,15 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRController(
       *quad_tilt_wing_plant, *quad_tilt_wing_context_goal, Q, R);
 }
 
+std::unique_ptr<systems::AffineSystem<double>> ArbitraryController(
+    const QuadTiltWingPlant<double>* quad_tilt_wing_plant) {
+        double kNumOfInputs = quad_tilt_wing_plant->get_input_size();
+        VectorX<double> arbitrary_input(kNumOfInputs);
+        arbitrary_input << 0.0, 0.0, 0.0, 0.0, M_PI/2, M_PI/2, M_PI/2, M_PI/2;
+        
+        return arbitrary_input;
+        }
+
 }  // namespace quad_tilt_wing
 }  // namespace examples
 }  // namespace drake

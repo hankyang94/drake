@@ -97,6 +97,10 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRController(
     const QuadTiltWingPlant<double>* quad_tilt_wing_plant,
     Eigen::Vector3d nominal_position);
 
+
+std::unique_ptr<systems::AffineSystem<double>> ArbitraryController(
+    const QuadTiltWingPlant<double>* quad_tilt_wing_plant);
+    
 }  // namespace quad_tilt_wing
 }  // namespace examples
 }  // namespace drake
