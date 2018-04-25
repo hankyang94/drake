@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <iostream>
+#include <math.h>
 
 #include <gflags/gflags.h>
 
@@ -49,11 +50,22 @@ int do_main() {
   //~ // The nominal hover position is at (0, 0, 1.0) in world coordinates.
   //~ const Eigen::Vector3d kNominalPosition{((Eigen::Vector3d() << 0.0, 0.0, 1.0). 
       //~ finished())};
-
+  
   auto quad_tilt_wing = builder.AddSystem<QuadTiltWingPlant<double>>();
   quad_tilt_wing->set_name("quad_tilt_wing");
+  
+  int num_inputs = quad_tilt_wing->get_input_port(0).size();
+  Eigen::VectorXd arbitrary_input = Eigen::VectorXd::Zero(num_inputs);
+  Eigen::VectorXd arbitrary_speed;
+  arbitrary_speed << 7000, 7000, 7000, 7000;  //RPM 6600-9000
+  auto arbitrary_speed_rps =  arbitrary_speed *2*M_PI/60; // convert to radians per second
+  auto arbitrary_speed2 = (arbitrary_speed_rps.array().square()).matrix();
+  arbitrary_input << arbitrary_speed2,M_PI/2,M_PI/2,M_PI/2,M_PI/2;
+  
+  std::cout << "Arbitrary input: " << arbitrary_input << std::endl;
+  
   auto controller = builder.AddSystem(ArbitraryController(
-      quad_tilt_wing));
+      quad_tilt_wing, arbitrary_input));
   controller->set_name("controller");
   auto visualizer =
       builder.AddSystem<drake::systems::DrakeVisualizer>(*tree, &lcm);

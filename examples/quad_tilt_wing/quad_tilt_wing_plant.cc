@@ -280,7 +280,7 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRController(
 }
 
 std::unique_ptr<systems::AffineSystem<double>> ArbitraryController(
-    const QuadTiltWingPlant<double>* quad_tilt_wing_plant) {
+    const QuadTiltWingPlant<double>* quad_tilt_wing_plant, Eigen::VectorXd arbitrary_control) {
     int num_inputs = quad_tilt_wing_plant->get_num_states();
     int num_outputs = quad_tilt_wing_plant->get_input_size();
     int num_states = 0;                                            //what does 0 mean here? initiate a matrix with 0 dimension?
@@ -289,7 +289,7 @@ std::unique_ptr<systems::AffineSystem<double>> ArbitraryController(
     Eigen::VectorXd f0 = Eigen::VectorXd::Zero(num_states);
     Eigen::MatrixXd C = Eigen::MatrixXd::Zero(num_outputs, num_states);
     Eigen::MatrixXd D = Eigen::MatrixXd::Zero(num_outputs, num_inputs);
-    Eigen::VectorXd y0 = Eigen::VectorXd::Zero(num_outputs);
+    //~ Eigen::VectorXd y0 = Eigen::VectorXd::Zero(num_outputs);
 
     return std::make_unique<systems::AffineSystem<double>>(
           A,   // A
@@ -297,7 +297,7 @@ std::unique_ptr<systems::AffineSystem<double>> ArbitraryController(
           f0,   // xDot0
           C,  // C
           D,  // D
-          y0,                // y0
+          arbitrary_control,                // y0
           0.0);
 }
 
