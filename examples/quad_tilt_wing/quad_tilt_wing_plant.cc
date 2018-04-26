@@ -75,6 +75,12 @@ QuadTiltWingPlant<T>::~QuadTiltWingPlant() {}
 template <typename T>
 void QuadTiltWingPlant<T>::CopyStateOut(const systems::Context<T> &context,
                                      systems::BasicVector<T> *output) const {
+  // VectorX<T> state = context.get_continuous_state_vector().CopyToVector();    //state variable
+//   VectorX<T> u = this->EvalVectorInput(context, 0)->get_value();
+//   VectorX<T> combined_vector(kStateDimension+8);
+//   combined_vector << state, Eigen::VectorXd::Zero(8);
+//   std::cout << "combined output: " << combined_vector << std::endl;
+//   output->set_value(combined_vector);
   output->set_value(
       context.get_continuous_state_vector().CopyToVector());            // I guess the output is the output port
 }
@@ -85,12 +91,12 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
     systems::ContinuousState<T> *derivatives) const {
         // state = [X,Y,Z,phi,theta,psi,dot_X,dot_Y,dot_Z,dot_phi,dot_theta,dot_psi]
   VectorX<T> state = context.get_continuous_state_vector().CopyToVector();
-  
+
   std::cout << "inside plant, x is:" << state << std::endl;
-  
+
         // u = [omega_1^2, omega_2^2, omega_3^2, omega_4^2, theta_1, theta_2, theta_3, theta_4]
   VectorX<T> u = this->EvalVectorInput(context, 0)->get_value();        // get value from the input port, which is the controller
-  
+
   std::cout << "inside plant, u is:" << u << std::endl;
 
   // Extract orientation, angular velocities and linear velocities.
@@ -237,7 +243,7 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
   // Recomposing the derivatives vector.
   VectorX<T> xdot(12);
   xdot << state.tail(6), xyz_ddot, rpy_ddot;
-  
+
   std::cout << "inside plant, xdot is:" << xdot << std::endl;
 
   derivatives->SetFromVector(xdot);

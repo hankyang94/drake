@@ -21,10 +21,12 @@
 #include "drake/systems/analysis/simulator.h"
 #include "drake/systems/framework/diagram.h"
 #include "drake/systems/framework/diagram_builder.h"
+#include "drake/systems/primitives/multiplexer.h"
+#include "drake/systems/primitives/demultiplexer.h"
 
 DEFINE_int32(simulation_trials, 1, "Number of trials to simulate.");
-DEFINE_double(simulation_real_time_rate, 0.1, "Real time rate");
-DEFINE_double(trial_duration, 1, "Duration of execution of each trial");
+DEFINE_double(simulation_real_time_rate, 0.05, "Real time rate");
+DEFINE_double(trial_duration, 0.5, "Duration of execution of each trial");
 
 namespace drake {
 using systems::DiagramBuilder;
@@ -32,6 +34,7 @@ using systems::Simulator;
 using systems::Context;
 using systems::ContinuousState;
 using systems::VectorBase;
+using std::make_unique;
 
 namespace examples {
 namespace quad_tilt_wing {
@@ -44,52 +47,69 @@ int do_main() {
 
   auto tree = std::make_unique<RigidBodyTree<double>>();
   parsers::urdf::AddModelInstanceFromUrdfFileToWorld(
-      FindResourceOrThrow("drake/examples/quad_tilt_wing/quad_tilt_wing_fixed.urdf"),
+      FindResourceOrThrow("drake/examples/quad_tilt_wing/quad_tilt_wing.urdf"),
       multibody::joints::kRollPitchYaw, tree.get());
 
   //~ // The nominal hover position is at (0, 0, 1.0) in world coordinates.
-  //~ const Eigen::Vector3d kNominalPosition{((Eigen::Vector3d() << 0.0, 0.0, 1.0). 
+  //~ const Eigen::Vector3d kNominalPosition{((Eigen::Vector3d() << 0.0, 0.0, 1.0).
       //~ finished())};
-  
+
   auto quad_tilt_wing = builder.AddSystem<QuadTiltWingPlant<double>>();
   quad_tilt_wing->set_name("quad_tilt_wing");
-  
+
   int num_inputs = quad_tilt_wing->get_input_port(0).size();
   Eigen::VectorXd arbitrary_input = Eigen::VectorXd::Zero(num_inputs);
-  Eigen::VectorXd arbitrary_speed;
-  arbitrary_speed << 7000, 7000, 7000, 7000;  //RPM 6600-9000
-  auto arbitrary_speed_rps =  arbitrary_speed *2*M_PI/60; // convert to radians per second
-  auto arbitrary_speed2 = (arbitrary_speed_rps.array().square()).matrix();
-  arbitrary_input << arbitrary_speed2,M_PI/2,M_PI/2,M_PI/2,M_PI/2;
-  
+  arbitrary_input(0) = 10e6;
+  arbitrary_input(1) = 10e6;
+  arbitrary_input(2) = 10e6;
+  arbitrary_input(3) = 10e6;
+  arbitrary_input(4) = M_PI/2;
+  arbitrary_input(5) = M_PI/2;
+  arbitrary_input(6) = M_PI/2;
+  arbitrary_input(7) = M_PI/2;
+  // Eigen::VectorXd arbitrary_speed;
+  // arbitrary_speed << 7000, 7000, 7000, 7000;  //RPM 6600-9000
+  // auto arbitrary_speed_rps =  arbitrary_speed *2*M_PI/60; // convert to radians per second
+  // auto arbitrary_speed2 = (arbitrary_speed_rps.array().square()).matrix();
+  // arbitrary_input << arbitrary_speed2,M_PI/2,M_PI/2,M_PI/2,M_PI/2;
+
+
   std::cout << "Arbitrary input: " << arbitrary_input << std::endl;
-  
+
   auto controller = builder.AddSystem(ArbitraryController(
       quad_tilt_wing, arbitrary_input));
   controller->set_name("controller");
   auto visualizer =
       builder.AddSystem<drake::systems::DrakeVisualizer>(*tree, &lcm);
   visualizer->set_name("visualizer");
-  
+
+  auto mux = builder.AddSystem<drake::systems::Multiplexer<double>>(std::vector<int> {12, 8});
+  mux->set_name("mux");
+
+  //// check system input and output port sizes
   std::cout << "Plant output size: " << quad_tilt_wing->get_output_port(0).size() << std::endl;
   std::cout << "Controller input size: " << controller->get_input_port().size() << std::endl;
   std::cout << "Controller output size: " << controller->get_output_port().size() << std::endl;
   std::cout << "Plant input size: " << quad_tilt_wing->get_input_port(0).size() << std::endl;
   std::cout << "Plant output size: " << quad_tilt_wing->get_output_port(0).size() << std::endl;
   std::cout << "Visualizer input size: " << visualizer->get_input_port(0).size() << std::endl;
-  
+  std::cout << "mux output size: " << mux->get_output_port(0).size() << std::endl;
+
   builder.Connect(quad_tilt_wing->get_output_port(0), controller->get_input_port());
   builder.Connect(controller->get_output_port(), quad_tilt_wing->get_input_port(0));
-  builder.Connect(quad_tilt_wing->get_output_port(0), visualizer->get_input_port(0));
-  
+
+  builder.Connect(quad_tilt_wing->get_output_port(0), mux->get_input_port(0));
+  builder.Connect(controller->get_output_port(), mux->get_input_port(1));
+  builder.Connect(mux->get_output_port(0), visualizer->get_input_port(0));
+
   auto diagram = builder.Build();
-  
+
   std::cout << "System Built" << std::endl;
-  
+
   Simulator<double> simulator(*diagram);
   VectorX<double> x0 = VectorX<double>::Zero(12);
   x0(2) = 5;  //Z initial height
-  x0(6) = 10;  // dot_x x direction speed
+  x0(6) = 0;  // dot_x x direction speed
   x0(8) = 0;   // dot_z z direction speed
 
   //~ const VectorX<double> kNominalState{((Eigen::VectorXd(12) << kNominalPosition,
@@ -100,14 +120,14 @@ int do_main() {
   for (int i = 0; i < FLAGS_simulation_trials; i++) {
     auto diagram_context = diagram->CreateDefaultContext();
     //~ x0 = VectorX<double>::Random(12);
-    
+
     std::cout << "x0 size:" << x0.size() <<std::endl;
     std::cout << "Continuous state vector size:" << simulator.get_mutable_context().get_mutable_continuous_state_vector().size() <<std::endl;
-    
+
     //~ auto state_vector = simulator.get_mutable_context().get_mutable_continuous_state_vector().CopyToVector();
-    
+
     //~ std::cout << "Continuous state vector:" << state_vector << std::endl;
-    
+
     simulator.get_mutable_context()
         .get_mutable_continuous_state_vector()
         .SetFromVector(x0);
