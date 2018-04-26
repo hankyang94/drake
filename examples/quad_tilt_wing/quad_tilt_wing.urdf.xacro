@@ -49,6 +49,26 @@
     </visual>
   </link>
   
+  <link name="top_indicator">
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 0 0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
+    <visual>
+      <geometry>
+        <box size="${fuselage_length/2} ${fuselage_height} ${fuselage_height/2}"/>
+      </geometry>
+      <material name="white"/>
+    </visual>
+  </link>
+  
+  <joint name="top_to_fuselage" type="fixed">
+    <parent link="fuselage"/>
+    <child link="top_indicator"/>
+    <origin xyz="${fuselage_length/4} 0 ${fuselage_height/4*3}"/>
+  </joint>
+  
   <link name="wing_1_rod">
     <inertial>
       <mass value="0.1"/>
@@ -65,8 +85,8 @@
   </link>
   
   <joint name="wing_1_joint" type="revolute">
-    <axis xyz="0 -1 0"/>
-    <limit effort="1000.0" lower="-${pi/6}" upper="${2/3*pi}" velocity="0.5"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="1000.0" lower="-${2/3*pi}" upper="${pi/6}" velocity="0.5"/>
     <parent link="fuselage"/>
     <child link="wing_1_rod"/>
     <origin xyz="${front_wing_joint} 0 0"/>
@@ -151,8 +171,8 @@
   </link>
   
   <joint name="wing_2_joint" type="revolute">
-    <axis xyz="0 -1 0"/>
-    <limit effort="1000.0" lower="-${pi/6}" upper="${2/3*pi}" velocity="0.5"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="1000.0" lower="-${2/3*pi}" upper="${pi/6}" velocity="0.5"/>
     <parent link="fuselage"/>
     <child link="wing_2_rod"/>
     <origin xyz="${front_wing_joint} 0 0"/>
@@ -237,8 +257,8 @@
   </link>
   
   <joint name="wing_3_joint" type="revolute">
-    <axis xyz="0 -1 0"/>
-    <limit effort="1000.0" lower="-${pi/6}" upper="${2/3*pi}" velocity="0.5"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="1000.0" lower="-${2/3*pi}" upper="${pi/6}" velocity="0.5"/>
     <parent link="fuselage"/>
     <child link="wing_3_rod"/>
     <origin xyz="${rear_wing_joint} 0 0"/>
@@ -323,8 +343,8 @@
   </link>
   
   <joint name="wing_4_joint" type="revolute">
-    <axis xyz="0 -1 0"/>
-    <limit effort="1000.0" lower="-${pi/6}" upper="${2/3*pi}" velocity="0.5"/>
+    <axis xyz="0 1 0"/>
+    <limit effort="1000.0" lower="-${2/3*pi}" upper="${pi/6}" velocity="0.5"/>
     <parent link="fuselage"/>
     <child link="wing_4_rod"/>
     <origin xyz="${rear_wing_joint} 0 0"/>

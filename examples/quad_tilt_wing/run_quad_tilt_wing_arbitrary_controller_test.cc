@@ -59,14 +59,14 @@ int do_main() {
 
   int num_inputs = quad_tilt_wing->get_input_port(0).size();
   Eigen::VectorXd arbitrary_input = Eigen::VectorXd::Zero(num_inputs);
-  arbitrary_input(0) = 10e6;
-  arbitrary_input(1) = 10e6;
-  arbitrary_input(2) = 10e6;
-  arbitrary_input(3) = 10e6;
-  arbitrary_input(4) = M_PI/4;
-  arbitrary_input(5) = M_PI/4;
-  arbitrary_input(6) = M_PI/4;
-  arbitrary_input(7) = M_PI/4;
+  arbitrary_input(0) = 2.09e6;
+  arbitrary_input(1) = 2.09e6;
+  arbitrary_input(2) = 2.86e6;
+  arbitrary_input(3) = 2.86e6;
+  arbitrary_input(4) = -M_PI/2;
+  arbitrary_input(5) = -M_PI/2;
+  arbitrary_input(6) = -M_PI/2;
+  arbitrary_input(7) = -M_PI/2;
   // Eigen::VectorXd arbitrary_speed;
   // arbitrary_speed << 7000, 7000, 7000, 7000;  //RPM 6600-9000
   // auto arbitrary_speed_rps =  arbitrary_speed *2*M_PI/60; // convert to radians per second
