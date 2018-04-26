@@ -63,10 +63,10 @@ int do_main() {
   arbitrary_input(1) = 10e6;
   arbitrary_input(2) = 10e6;
   arbitrary_input(3) = 10e6;
-  arbitrary_input(4) = M_PI/2;
-  arbitrary_input(5) = M_PI/2;
-  arbitrary_input(6) = M_PI/2;
-  arbitrary_input(7) = M_PI/2;
+  arbitrary_input(4) = M_PI/4;
+  arbitrary_input(5) = M_PI/4;
+  arbitrary_input(6) = M_PI/4;
+  arbitrary_input(7) = M_PI/4;
   // Eigen::VectorXd arbitrary_speed;
   // arbitrary_speed << 7000, 7000, 7000, 7000;  //RPM 6600-9000
   // auto arbitrary_speed_rps =  arbitrary_speed *2*M_PI/60; // convert to radians per second
@@ -83,7 +83,11 @@ int do_main() {
       builder.AddSystem<drake::systems::DrakeVisualizer>(*tree, &lcm);
   visualizer->set_name("visualizer");
 
-  auto mux = builder.AddSystem<drake::systems::Multiplexer<double>>(std::vector<int> {12, 8});
+  auto plant_demux = builder.AddSystem<drake::systems::Demultiplexer<double>>(12, 6);
+  plant_demux->set_name("plant_demux");
+  auto controller_demux = builder.AddSystem<drake::systems::Demultiplexer<double>>(8, 4);
+  controller_demux->set_name("controller_demux");
+  auto mux = builder.AddSystem<drake::systems::Multiplexer<double>>(std::vector<int> {6,4,6,4});
   mux->set_name("mux");
 
   //// check system input and output port sizes
@@ -94,12 +98,19 @@ int do_main() {
   std::cout << "Plant output size: " << quad_tilt_wing->get_output_port(0).size() << std::endl;
   std::cout << "Visualizer input size: " << visualizer->get_input_port(0).size() << std::endl;
   std::cout << "mux output size: " << mux->get_output_port(0).size() << std::endl;
-
+  // connect dynamics ports
   builder.Connect(quad_tilt_wing->get_output_port(0), controller->get_input_port());
   builder.Connect(controller->get_output_port(), quad_tilt_wing->get_input_port(0));
-
-  builder.Connect(quad_tilt_wing->get_output_port(0), mux->get_input_port(0));
-  builder.Connect(controller->get_output_port(), mux->get_input_port(1));
+  // demux plant into 6 and 6, first 6 is postion, second 6 is velocity
+  builder.Connect(quad_tilt_wing->get_output_port(0), plant_demux->get_input_port(0));
+  // demux controller into 4 and 4, first 4 is prop speed^2, second 4 is tilting angle
+  builder.Connect(controller->get_output_port(), controller_demux->get_input_port(0));
+  // mux position, tilting angle, speed, ~ together, the fourth port of mux is not connected, because we dont care
+  builder.Connect(plant_demux->get_output_port(0), mux->get_input_port(0));
+  builder.Connect(controller_demux->get_output_port(1), mux->get_input_port(1));
+  builder.Connect(plant_demux->get_output_port(1), mux->get_input_port(2));
+  builder.Connect(controller_demux->get_output_port(1), mux->get_input_port(3));
+  // connect mux to visualizer
   builder.Connect(mux->get_output_port(0), visualizer->get_input_port(0));
 
   auto diagram = builder.Build();
