@@ -25,8 +25,8 @@
 #include "drake/systems/primitives/demultiplexer.h"
 
 DEFINE_int32(simulation_trials, 1, "Number of trials to simulate.");
-DEFINE_double(simulation_real_time_rate, 0.05, "Real time rate");
-DEFINE_double(trial_duration, 0.5, "Duration of execution of each trial");
+DEFINE_double(simulation_real_time_rate, 0.5, "Real time rate");
+DEFINE_double(trial_duration, 2, "Duration of execution of each trial");
 
 namespace drake {
 using systems::DiagramBuilder;
@@ -63,10 +63,10 @@ int do_main() {
   arbitrary_input(1) = 2.09e6;
   arbitrary_input(2) = 2.86e6;
   arbitrary_input(3) = 2.86e6;
-  arbitrary_input(4) = -M_PI/2;
-  arbitrary_input(5) = -M_PI/2;
-  arbitrary_input(6) = -M_PI/2;
-  arbitrary_input(7) = -M_PI/2;
+  arbitrary_input(4) = -M_PI/6;
+  arbitrary_input(5) = -M_PI/6;
+  arbitrary_input(6) = -M_PI/6;
+  arbitrary_input(7) = -M_PI/6;
   // Eigen::VectorXd arbitrary_speed;
   // arbitrary_speed << 7000, 7000, 7000, 7000;  //RPM 6600-9000
   // auto arbitrary_speed_rps =  arbitrary_speed *2*M_PI/60; // convert to radians per second
