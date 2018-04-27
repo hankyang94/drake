@@ -63,8 +63,8 @@ int do_main() {
   arbitrary_input(1) = 2.09e6;
   arbitrary_input(2) = 2.86e6;
   arbitrary_input(3) = 2.86e6;
-  arbitrary_input(4) = 0;
-  arbitrary_input(5) = 0;
+  arbitrary_input(4) = -M_PI/60;
+  arbitrary_input(5) = -M_PI/60;
   arbitrary_input(6) = 0;
   arbitrary_input(7) = 0;
   // Eigen::VectorXd arbitrary_speed;
@@ -119,7 +119,7 @@ int do_main() {
 
   Simulator<double> simulator(*diagram);
   VectorX<double> x0 = VectorX<double>::Zero(12);
-  x0(2) = 5;  //Z initial height
+  x0(2) = 1;  //Z initial height
   x0(6) = 0;  // dot_x x direction speed
   x0(8) = 0;   // dot_z z direction speed
 
