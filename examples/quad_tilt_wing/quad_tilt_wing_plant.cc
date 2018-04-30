@@ -262,14 +262,31 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRController(
 
   Eigen::VectorXd x0 = Eigen::VectorXd::Zero(12);
   x0.topRows(3) = nominal_position;
+  
+  std::cout << "x0: " << x0 << std::endl;
 
   // Nominal input corresponds to a hover.
-  Eigen::VectorXd u0_prop = Eigen::VectorXd::Constant(
-      4, quad_tilt_wing_plant->m() * quad_tilt_wing_plant->g() / 4 / quad_tilt_wing_plant->kProp());
-  Eigen::VectorXd u0_tilt = Eigen::VectorXd::Constant(4, M_PI/2);
+  double rear_moment_arm = quad_tilt_wing_plant->rear_joint_x();
+  std::cout << rear_moment_arm << std::endl;
+  double front_moment_arm = quad_tilt_wing_plant->front_joint_x();
+  std::cout << front_moment_arm << std::endl;
+  double UAV_fg = quad_tilt_wing_plant->m() * quad_tilt_wing_plant->g();
+  std::cout << UAV_fg << std::endl;
+  double front_prop_f = UAV_fg/(rear_moment_arm + front_moment_arm) * rear_moment_arm / 2;
+  std::cout << front_prop_f << std::endl;
+  double rear_prop_f = UAV_fg/(rear_moment_arm + front_moment_arm) * front_moment_arm / 2;
+  std::cout << rear_prop_f << std::endl;
+  Eigen::Vector4d u0_prop{front_prop_f/quad_tilt_wing_plant->kProp(), front_prop_f/quad_tilt_wing_plant->kProp(),
+      rear_prop_f/quad_tilt_wing_plant->kProp(), rear_prop_f/quad_tilt_wing_plant->kProp()};
+  Eigen::VectorXd u0_tilt = Eigen::VectorXd::Constant(4, -M_PI/2);
+  
+  std::cout << u0_prop << std::endl;
+  std::cout << u0_tilt << std::endl;
 
-  Eigen::VectorXd u0;
+  Eigen::VectorXd u0(8);
   u0 << u0_prop, u0_tilt;
+  
+  std::cout << "u0: " << u0 << std::endl;
 
   quad_tilt_wing_context_goal->FixInputPort(0, u0);
   quad_tilt_wing_plant->set_state(quad_tilt_wing_context_goal.get(), x0);              //where is the linearization part?
@@ -280,6 +297,8 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRController(
   Q.topLeftCorner<6, 6>() = 10 * Eigen::MatrixXd::Identity(6, 6);
 
   Eigen::MatrixXd R = Eigen::MatrixXd::Identity(8, 8);
+  
+  std::cout << "GOT Q and R." << std::endl;
 
   return systems::controllers::LinearQuadraticRegulator(
       *quad_tilt_wing_plant, *quad_tilt_wing_context_goal, Q, R);

@@ -59,14 +59,14 @@ int do_main() {
 
   int num_inputs = quad_tilt_wing->get_input_port(0).size();
   Eigen::VectorXd arbitrary_input = Eigen::VectorXd::Zero(num_inputs);
-  arbitrary_input(0) = 2.09e6;
-  arbitrary_input(1) = 2.09e6;
-  arbitrary_input(2) = 2.86e6;
-  arbitrary_input(3) = 2.86e6;
-  arbitrary_input(4) = -M_PI/60;
-  arbitrary_input(5) = -M_PI/60;
-  arbitrary_input(6) = 0;
-  arbitrary_input(7) = 0;
+  arbitrary_input(0) = 376922;
+  arbitrary_input(1) = 376922;
+  arbitrary_input(2) = 515788;
+  arbitrary_input(3) = 515788;
+  arbitrary_input(4) = -M_PI/2;
+  arbitrary_input(5) = -M_PI/2;
+  arbitrary_input(6) = -M_PI/2;
+  arbitrary_input(7) = -M_PI/2;
   // Eigen::VectorXd arbitrary_speed;
   // arbitrary_speed << 7000, 7000, 7000, 7000;  //RPM 6600-9000
   // auto arbitrary_speed_rps =  arbitrary_speed *2*M_PI/60; // convert to radians per second
@@ -120,7 +120,7 @@ int do_main() {
   Simulator<double> simulator(*diagram);
   VectorX<double> x0 = VectorX<double>::Zero(12);
   x0(2) = 1;  //Z initial height
-  x0(6) = 0;  // dot_x x direction speed
+  x0(6) = 1;  // dot_x x direction speed
   x0(8) = 0;   // dot_z z direction speed
 
   //~ const VectorX<double> kNominalState{((Eigen::VectorXd(12) << kNominalPosition,

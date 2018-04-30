@@ -1,3 +1,6 @@
+#include <math.h>
+#include <iostream>
+
 #include "drake/systems/controllers/linear_quadratic_regulator.h"
 
 #include "drake/common/drake_assert.h"
@@ -102,6 +105,7 @@ std::unique_ptr<systems::AffineSystem<double>> LinearQuadraticRegulator(
   DRAKE_DEMAND(system.get_num_input_ports() == 1);
   const int num_inputs = system.get_input_port(0).size(),
             num_states = context.get_num_total_states();
+  std::cout << "num_inputs inside LQR: " << num_inputs << "num_states inside LQR: " << num_states << std::endl;
   DRAKE_DEMAND(num_states > 0);
   // The Linearize method call below will verify that the system has either
   // continuous-time OR (only simple) discrete-time dyanmics.
@@ -111,6 +115,9 @@ std::unique_ptr<systems::AffineSystem<double>> LinearQuadraticRegulator(
   // Use first input and no outputs (the output dynamics are irrelevant for
   // LQR design).
   auto linear_system = Linearize(system, context, 0, kNoOutput);
+  
+  std::cout << "linear_system A: " << linear_system->A() << std::endl;
+  std::cout << "linear_system B: " << linear_system->B() << std::endl;
 
   // DiscreteTimeLinearQuadraticRegulator does not support N yet.
   DRAKE_DEMAND(linear_system->time_period() == 0.0 || N.rows() == 0);
@@ -128,6 +135,9 @@ std::unique_ptr<systems::AffineSystem<double>> LinearQuadraticRegulator(
           : context.get_discrete_state(0).CopyToVector();
 
   const auto& u0 = system.EvalEigenVectorInput(context, 0);
+  std::cout << "u0 inside LQR: " << u0 << std::endl;
+  
+  std::cout << "K inside LQR: " << lqr_result.K << std::endl;
 
   // Return the affine controller: u = u0 - K(x-x0).
   return std::make_unique<systems::AffineSystem<double>>(
