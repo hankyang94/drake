@@ -124,7 +124,11 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
   double rear_wing_A = rear_wing_len_*rear_wing_wid_;
   auto xz_speed2 = pow(xyz_dot(2), 2) + pow(xyz_dot(0), 2);
   // compute angle of attack
-  VectorX<T> angle_of_attack = (-tilt_angle.array() - atan2(xyz_dot(2), xyz_dot(0))).matrix();  //alpha = -theta - arctan(v_z, v_x)
+  double v_tol = 1e-6;
+  auto alpha_wind = atan2(xyz_dot(2), xyz_dot(0));
+  if (abs(xyz_dot(0)) < v_tol) { alpha_wind = 0; }
+  else { alpha_wind = atan2(xyz_dot(2), xyz_dot(0)); }
+  VectorX<T> angle_of_attack = (-tilt_angle.array() - alpha_wind).matrix();  //alpha = -theta - arctan(v_z, v_x)
   VectorX<T> lift_coef = (2*angle_of_attack.array().sin()*angle_of_attack.array().cos()).matrix();
   VectorX<T> drag_coef = 2*(angle_of_attack.array().sin().square()).matrix(); // convert between array and matrix, because only array supports element wise operations
   // compute and add forces from each wing
@@ -262,7 +266,8 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRController(
 
   Eigen::VectorXd x0 = Eigen::VectorXd::Zero(12);
   x0.topRows(3) = nominal_position;
-  
+  x0(3) = 0;
+
   std::cout << "x0: " << x0 << std::endl;
 
   // Nominal input corresponds to a hover.
@@ -279,13 +284,13 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRController(
   Eigen::Vector4d u0_prop{front_prop_f/quad_tilt_wing_plant->kProp(), front_prop_f/quad_tilt_wing_plant->kProp(),
       rear_prop_f/quad_tilt_wing_plant->kProp(), rear_prop_f/quad_tilt_wing_plant->kProp()};
   Eigen::VectorXd u0_tilt = Eigen::VectorXd::Constant(4, -M_PI/2);
-  
+
   std::cout << u0_prop << std::endl;
   std::cout << u0_tilt << std::endl;
 
   Eigen::VectorXd u0(8);
   u0 << u0_prop, u0_tilt;
-  
+
   std::cout << "u0: " << u0 << std::endl;
 
   quad_tilt_wing_context_goal->FixInputPort(0, u0);
@@ -297,7 +302,9 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRController(
   Q.topLeftCorner<6, 6>() = 10 * Eigen::MatrixXd::Identity(6, 6);
 
   Eigen::MatrixXd R = Eigen::MatrixXd::Identity(8, 8);
-  
+  R.topLeftCorner<4, 4>() = 1e-8 * Eigen::MatrixXd::Identity(4, 4);
+  R.bottomRightCorner<4, 4>() = 1e2 * Eigen::MatrixXd::Identity(4, 4);
+
   std::cout << "GOT Q and R." << std::endl;
 
   return systems::controllers::LinearQuadraticRegulator(

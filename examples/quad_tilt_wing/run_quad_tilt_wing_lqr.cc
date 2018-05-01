@@ -25,8 +25,8 @@
 #include "drake/systems/primitives/demultiplexer.h"
 
 DEFINE_int32(simulation_trials, 1, "Number of trials to simulate.");
-DEFINE_double(simulation_real_time_rate, 0.1, "Real time rate");
-DEFINE_double(trial_duration, 1, "Duration of execution of each trial");
+DEFINE_double(simulation_real_time_rate, 1, "Real time rate");
+DEFINE_double(trial_duration, 10, "Duration of execution of each trial");
 
 namespace drake {
 using systems::DiagramBuilder;
@@ -52,26 +52,26 @@ int do_main() {
   std::cout << "Finished reading urdf." << std::endl;
 
   // The nominal hover position is at (0, 0, 1.0) in world coordinates.
-  const Eigen::Vector3d kNominalPosition{((Eigen::Vector3d() << 0.0, 0.0, 1.0). 
+  const Eigen::Vector3d kNominalPosition{((Eigen::Vector3d() << 0.0, 0.0, 1.0).
       finished())};
-  
+
   std::cout << "kNominalPosition: " << kNominalPosition << std::endl;
 
   auto quad_tilt_wing_plant = builder.AddSystem<QuadTiltWingPlant<double>>();
   quad_tilt_wing_plant->set_name("quad_tilt_wing_plant");
-  
+
   std::cout << "Added quad tilt-wing plant." << std::endl;
 
   auto controller = builder.AddSystem(StabilizingLQRController(
     quad_tilt_wing_plant, kNominalPosition));
   controller->set_name("controller");
-  
+
   std::cout << "Added LQR controller." << std::endl;
-  
+
   auto visualizer =
       builder.AddSystem<drake::systems::DrakeVisualizer>(*tree, &lcm);
   visualizer->set_name("visualizer");
-  
+
   std::cout << "Added Visualizer." << std::endl;
 
   auto plant_demux = builder.AddSystem<drake::systems::Demultiplexer<double>>(12, 6);
@@ -110,7 +110,10 @@ int do_main() {
 
   Simulator<double> simulator(*diagram);
   VectorX<double> x0 = VectorX<double>::Zero(12);
-  x0(2) = 1;  //Z initial height
+  x0(2) = 0.5;  //Z initial height
+  x0(3) = M_PI/6;
+  x0(4) = M_PI/6;
+  x0(5) = M_PI/6;
   x0(6) = 0.5;  // dot_x x direction speed
   x0(8) = 0;   // dot_z z direction speed
 
