@@ -98,6 +98,14 @@ class QuadTiltWingPlant final : public systems::LeafSystem<T> {                /
 std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRController(
     const QuadTiltWingPlant<double>* quad_tilt_wing_plant,
     Eigen::Vector3d nominal_position);
+    
+std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerUpright(
+    const QuadTiltWingPlant<double>* quad_tilt_wing_plant,
+    Eigen::Vector3d nominal_position);
+
+std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerWingtilt(
+    const QuadTiltWingPlant<double>* quad_tilt_wing_plant,
+    Eigen::Vector3d nominal_position);
 
 
 std::unique_ptr<systems::AffineSystem<double>> ArbitraryController(

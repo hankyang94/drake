@@ -86,7 +86,7 @@
   
   <joint name="wing_1_joint" type="revolute">
     <axis xyz="0 1 0"/>
-    <limit effort="1000.0" lower="-${2/3*pi}" upper="${pi/6}" velocity="0.5"/>
+    <limit effort="1000.0" lower="-${pi/2+pi/4}" upper="${pi/4}" velocity="0.5"/>
     <parent link="fuselage"/>
     <child link="wing_1_rod"/>
     <origin xyz="${front_wing_joint} 0 0"/>
@@ -172,7 +172,7 @@
   
   <joint name="wing_2_joint" type="revolute">
     <axis xyz="0 1 0"/>
-    <limit effort="1000.0" lower="-${2/3*pi}" upper="${pi/6}" velocity="0.5"/>
+    <limit effort="1000.0" lower="-${3/4*pi}" upper="${pi/4}" velocity="0.5"/>
     <parent link="fuselage"/>
     <child link="wing_2_rod"/>
     <origin xyz="${front_wing_joint} 0 0"/>
@@ -258,7 +258,7 @@
   
   <joint name="wing_3_joint" type="revolute">
     <axis xyz="0 1 0"/>
-    <limit effort="1000.0" lower="-${2/3*pi}" upper="${pi/6}" velocity="0.5"/>
+    <limit effort="1000.0" lower="-${3/4*pi}" upper="${pi/4}" velocity="0.5"/>
     <parent link="fuselage"/>
     <child link="wing_3_rod"/>
     <origin xyz="${rear_wing_joint} 0 0"/>
@@ -344,7 +344,7 @@
   
   <joint name="wing_4_joint" type="revolute">
     <axis xyz="0 1 0"/>
-    <limit effort="1000.0" lower="-${2/3*pi}" upper="${pi/6}" velocity="0.5"/>
+    <limit effort="1000.0" lower="-${3/4*pi}" upper="${pi/4}" velocity="0.5"/>
     <parent link="fuselage"/>
     <child link="wing_4_rod"/>
     <origin xyz="${rear_wing_joint} 0 0"/>

@@ -115,5 +115,63 @@ drake_cc_binary(
     ],
 )
 
+drake_cc_binary(
+    name = "run_quad_tilt_wing_lqr_upright",
+    srcs = ["run_quad_tilt_wing_lqr_upright.cc"],
+    add_test_rule = 1,
+    data = [":models"],
+    test_rule_args = [
+        "--simulation_trials=1",
+        "--simulation_real_time_rate=0.1",
+        "--trial_duration=1.0",
+    ],
+    test_rule_size = "medium",
+    deps = [
+        ":quad_tilt_wing_plant",
+        "//common:find_resource",
+        "//lcm",
+        "//multibody:rigid_body_tree",
+        "//multibody:rigid_body_tree_construction",
+        "//multibody/parsers",
+        "//multibody/rigid_body_plant",
+        "//multibody/rigid_body_plant:drake_visualizer",
+        "//systems/analysis:simulator",
+        "//systems/framework:diagram",
+        "//systems/primitives:constant_vector_source",
+        "//systems/primitives:demultiplexer",
+        "//systems/primitives:multiplexer",
+        "@gflags",
+    ],
+)
+
+drake_cc_binary(
+    name = "run_quad_tilt_wing_lqr_wing_tilt",
+    srcs = ["run_quad_tilt_wing_lqr_wing_tilt.cc"],
+    add_test_rule = 1,
+    data = [":models"],
+    test_rule_args = [
+        "--simulation_trials=1",
+        "--simulation_real_time_rate=0.1",
+        "--trial_duration=1.0",
+    ],
+    test_rule_size = "medium",
+    deps = [
+        ":quad_tilt_wing_plant",
+        "//common:find_resource",
+        "//lcm",
+        "//multibody:rigid_body_tree",
+        "//multibody:rigid_body_tree_construction",
+        "//multibody/parsers",
+        "//multibody/rigid_body_plant",
+        "//multibody/rigid_body_plant:drake_visualizer",
+        "//systems/analysis:simulator",
+        "//systems/framework:diagram",
+        "//systems/primitives:constant_vector_source",
+        "//systems/primitives:demultiplexer",
+        "//systems/primitives:multiplexer",
+        "@gflags",
+    ],
+)
+
 install_data()
 add_lint_tests()
