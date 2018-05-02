@@ -111,10 +111,11 @@ int do_main() {
   Simulator<double> simulator(*diagram);
   VectorX<double> x0 = VectorX<double>::Zero(12);
   x0(2) = 0.5;  //Z initial height
-  x0(3) = M_PI/6;
-  x0(4) = M_PI/6;
-  x0(5) = M_PI/6;
-  x0(6) = 0.5;  // dot_x x direction speed
+  x0(3) = M_PI/20;
+  x0(4) = - 60.0 / 180.0 * M_PI;   // pitch angle
+  x0(5) = M_PI/20;
+  x0(6) = 0;  // dot_x x direction speed
+  x0(7) = 1; // dot_y y direction speed
   x0(8) = 0;   // dot_z z direction speed
 
   const VectorX<double> kNominalState{((Eigen::VectorXd(12) << kNominalPosition,

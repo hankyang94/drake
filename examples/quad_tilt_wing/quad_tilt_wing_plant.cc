@@ -317,7 +317,13 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerUpright(
     const QuadTiltWingPlant<double>* quad_tilt_wing_plant,
     Eigen::Vector3d nominal_position) {
   auto quad_tilt_wing_context_goal = quad_tilt_wing_plant->CreateDefaultContext();
-  double pitch_angle = -M_PI/6;
+  
+  double pitch_angle = 0;
+  pitch_angle = - 80.0 / 180.0 * M_PI;
+  //~ double pitch_angle = -M_PI/6;
+  
+  std::cout << "Pitch angle: " << pitch_angle << std::endl;
+  
   Eigen::VectorXd x0 = Eigen::VectorXd::Zero(12);
   x0.topRows(3) = nominal_position;
   x0(4) = pitch_angle;
