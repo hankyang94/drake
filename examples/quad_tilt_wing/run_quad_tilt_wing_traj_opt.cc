@@ -34,7 +34,7 @@ using namespace Eigen;
 
 namespace {
 
-DEFINE_double(target_realtime_rate, 0.1,
+DEFINE_double(target_realtime_rate, 1,
               "Playback speed.  See documentation for "
               "Simulator::set_target_realtime_rate() for details.");
 
@@ -225,7 +225,8 @@ int DoMain() {
   dirtran.SetSolverOption(solvers::IpoptSolver::id(), "resto.acceptable_constr_viol_tol", tol);
   dirtran.SetSolverOption(solvers::IpoptSolver::id(), "acceptable_tol", tol);
   dirtran.SetSolverOption(solvers::IpoptSolver::id(), "tol", tol);
-  dirtran.SetSolverOption(solvers::IpoptSolver::id(), "output_file", "/Users/Hank/solver_output/traj_opt_50mps.txt");
+  dirtran.SetSolverOption(solvers::IpoptSolver::id(), "output_file", "/home/hank/solver_output/traj_opt_100mps.txt");
+//  dirtran.SetSolverOption(solvers::IpoptSolver::id(), "output_file", "/Users/Hank/solver_output/traj_opt_100mps.txt");
 
   SolutionResult result = solver.Solve(dirtran);
 
@@ -246,7 +247,9 @@ int DoMain() {
   std::cout << "u_samples: " << u_samples << std::endl;
   std::cout << "x_samples: " << x_samples << std::endl;
 
-  std::ofstream file("/Users/Hank/Dropbox (MIT)/Courses/6.832 Underactuated Robotics/Final Project/code/solver_output/traj_opt_sol_100mps_py");
+  std::ofstream file("/home/hank/solver_output/traj_opt_sol_100mps_py.txt");
+//  std::ofstream file(
+//          "/Users/Hank/Dropbox (MIT)/Courses/6.832 Underactuated Robotics/Final Project/code/solver_output/traj_opt_sol_100mps_py");
   if (file.is_open()) {
     file << "t samples: " << '\n';
     file << t_samples << '\n';
