@@ -53,147 +53,107 @@ int DoMain() {
 
   auto context = quad_tilt_wing_plant.get()->CreateDefaultContext();
 
-  const int kNumTimeSamples = 61;
-  const double kMinimumTimeStep = 0.3;
-  const double kMaximumTimeStep = 0.6;
+  const int kNumTimeSamples = 2;
+  const double kMinimumTimeStep = 0.1;
+  const double kMaximumTimeStep = 0.1;
   systems::trajectory_optimization::DirectCollocation dirtran(
       quad_tilt_wing_plant.get(), *context, kNumTimeSamples, kMinimumTimeStep, kMaximumTimeStep);
 
 
   // Add bounds to the inputs
-//   const double kPI = 3.1415926;
-  const solvers::VectorXDecisionVariable& u = dirtran.input();
+  Eigen::VectorBlock<const solvers::VectorXDecisionVariable> u_0 = dirtran.input(0);
   const double kProp = quad_tilt_wing_plant -> kProp();
   const double UAV_fg = quad_tilt_wing_plant -> m() * quad_tilt_wing_plant -> g();
   const double kPropSpeedLowerLimit = 100;
-  const double kPropSpeedUpperLimit = UAV_fg / 2.0 / kProp;
+  const double kPropSpeedUpperLimit = UAV_fg / kProp;
   std::cout << "M_PI: " << M_PI << std::endl;
   const double kTiltUpperLimit = 0.1;
-  const double kTiltLowerLimit = - 0.51 * M_PI;
-  dirtran.AddConstraintToAllKnotPoints(u(0) >= kPropSpeedLowerLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(0) <= kPropSpeedUpperLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(1) >= kPropSpeedLowerLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(1) <= kPropSpeedUpperLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(2) >= kPropSpeedLowerLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(2) <= kPropSpeedUpperLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(3) >= kPropSpeedLowerLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(3) <= kPropSpeedUpperLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(4) >= kTiltLowerLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(4) <= kTiltUpperLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(5) >= kTiltLowerLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(5) <= kTiltUpperLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(6) >= kTiltLowerLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(6) <= kTiltUpperLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(7) >= kTiltLowerLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(7) <= kTiltUpperLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(0) == u(1));
-  dirtran.AddConstraintToAllKnotPoints(u(2) == u(3));
-  dirtran.AddConstraintToAllKnotPoints(u(4) == u(5));
-  dirtran.AddConstraintToAllKnotPoints(u(6) == u(7));
-
+  const double kTiltLowerLimit = - 0.1 * M_PI;
+  dirtran.AddLinearConstraint(u_0(0) >= kPropSpeedLowerLimit);
+  dirtran.AddLinearConstraint(u_0(0) <= kPropSpeedUpperLimit);
+  dirtran.AddLinearConstraint(u_0(1) >= kPropSpeedLowerLimit);
+  dirtran.AddLinearConstraint(u_0(1) <= kPropSpeedUpperLimit);
+  dirtran.AddLinearConstraint(u_0(2) >= kPropSpeedLowerLimit);
+  dirtran.AddLinearConstraint(u_0(2) <= kPropSpeedUpperLimit);
+  dirtran.AddLinearConstraint(u_0(3) >= kPropSpeedLowerLimit);
+  dirtran.AddLinearConstraint(u_0(3) <= kPropSpeedUpperLimit);
+  dirtran.AddLinearConstraint(u_0(4) >= kTiltLowerLimit);
+  dirtran.AddLinearConstraint(u_0(4) <= kTiltUpperLimit);
+  dirtran.AddLinearConstraint(u_0(5) >= kTiltLowerLimit);
+  dirtran.AddLinearConstraint(u_0(5) <= kTiltUpperLimit);
+  dirtran.AddLinearConstraint(u_0(6) >= kTiltLowerLimit);
+  dirtran.AddLinearConstraint(u_0(6) <= kTiltUpperLimit);
+  dirtran.AddLinearConstraint(u_0(7) >= kTiltLowerLimit);
+  dirtran.AddLinearConstraint(u_0(7) <= kTiltUpperLimit);
+  dirtran.AddLinearConstraint(u_0(0) == u_0(1));
+  dirtran.AddLinearConstraint(u_0(2) == u_0(3));
+  dirtran.AddLinearConstraint(u_0(4) == u_0(5));
+  dirtran.AddLinearConstraint(u_0(6) == u_0(7));
+  // All inputs should be same
+  for (int i = 1; i < kNumTimeSamples; i++) {
+    dirtran.AddLinearConstraint(dirtran.input(i) == u_0);
+  }
   // Add constraint to the states
   // Position constraints
   const double kXLowerLimit = -5.0;
-  const double kXUpperLimit = 2000.0;
-  const double kYLimit = 2.0;
-  const double kZLowerLimit = -2.0;
-  const double kZUpperLimit = 100.0;
-  const double kPhiLimit = M_PI/18.0;
-  const double kThetaLimit = M_PI/18.0;
-  const double kPsiLimit = M_PI/18.0;
+  const double kXUpperLimit = 300.0;
+  const double kY = 0.0;
+  const double kZ = 10;
+  const double kPhi = 0.0;
+  const double kTheta = 0.0;
+  const double kPsi = 0.0;
   // velocity constriants, very high bound
-  const double kXDotLowerLimit = -5.0;
-  const double kXDotUpperLimit = 100.0;
-  const double kYDotLimit = 1.0;
-  const double kZDotLimit = 10.0;
-  const double kPhiDotLimit = M_PI/10.0;
-  const double kThetaDotLimit = M_PI/10.0;
-  const double kPsiDotLimit = M_PI/10.0;
+  const double kXDot = 50.0;
+  const double kYDot = 0.0;
+  const double kZDot = 0.0;
+  const double kPhiDot = 0.0;
+  const double kThetaDot = 0.0;
+  const double kPsiDot = 0.0;
+  const double kEpsilon = 1e-4;
   const solvers::VectorXDecisionVariable& x = dirtran.state();
 
   std::cout << "x state size: " << x.size() << std::endl;
 
   dirtran.AddConstraintToAllKnotPoints(x(0) >= kXLowerLimit); // limit X
   dirtran.AddConstraintToAllKnotPoints(x(0) <= kXUpperLimit);
-  dirtran.AddConstraintToAllKnotPoints(x(1) >= -kYLimit); // limit Y
-  dirtran.AddConstraintToAllKnotPoints(x(1) <= kYLimit);
-  dirtran.AddConstraintToAllKnotPoints(x(2) >= kZLowerLimit); // limit Z
-  dirtran.AddConstraintToAllKnotPoints(x(2) <= kZUpperLimit);
-  dirtran.AddConstraintToAllKnotPoints(x(3) >= -kPhiLimit); // limit phi
-  dirtran.AddConstraintToAllKnotPoints(x(3) <= kPhiLimit);
-  dirtran.AddConstraintToAllKnotPoints(x(4) >= -kThetaLimit); // limit theta
-  dirtran.AddConstraintToAllKnotPoints(x(4) <= kThetaLimit);
-  dirtran.AddConstraintToAllKnotPoints(x(5) >= -kPsiLimit); // limit psi
-  dirtran.AddConstraintToAllKnotPoints(x(5) <= kPsiLimit);
-  dirtran.AddConstraintToAllKnotPoints(x(6) >= kXDotLowerLimit); // limit xdot
-  dirtran.AddConstraintToAllKnotPoints(x(6) <= kXDotUpperLimit);
-  dirtran.AddConstraintToAllKnotPoints(x(7) >= -kYDotLimit); // limit ydot
-  dirtran.AddConstraintToAllKnotPoints(x(7) <= kYDotLimit);
-  dirtran.AddConstraintToAllKnotPoints(x(8) >= -kZDotLimit); // limit zdot
-  dirtran.AddConstraintToAllKnotPoints(x(8) <= kZDotLimit);
-  dirtran.AddConstraintToAllKnotPoints(x(9) >= -kPhiDotLimit); // limit phidot
-  dirtran.AddConstraintToAllKnotPoints(x(9) <= kPhiDotLimit);
-  dirtran.AddConstraintToAllKnotPoints(x(10) >= -kThetaDotLimit); // limit thetadot
-  dirtran.AddConstraintToAllKnotPoints(x(10) <= kThetaDotLimit);
-  dirtran.AddConstraintToAllKnotPoints(x(11) >= -kPsiDotLimit); // limit psidot
-  dirtran.AddConstraintToAllKnotPoints(x(11) <= kPsiDotLimit);
+  dirtran.AddConstraintToAllKnotPoints(x(1) >= kY - kEpsilon); // limit Y
+  dirtran.AddConstraintToAllKnotPoints(x(1) <= kY + kEpsilon);
+  dirtran.AddConstraintToAllKnotPoints(x(2) >= kZ - kEpsilon); // limit Z
+  dirtran.AddConstraintToAllKnotPoints(x(2) <= kZ + kEpsilon);
+  dirtran.AddConstraintToAllKnotPoints(x(3) >= kPhi - kEpsilon); // limit phi
+  dirtran.AddConstraintToAllKnotPoints(x(3) <= kPhi + kEpsilon);
+  dirtran.AddConstraintToAllKnotPoints(x(4) >= kTheta - kEpsilon); // limit theta
+  dirtran.AddConstraintToAllKnotPoints(x(4) <= kTheta + kEpsilon);
+  dirtran.AddConstraintToAllKnotPoints(x(5) >= kPsi - kEpsilon); // limit psi
+  dirtran.AddConstraintToAllKnotPoints(x(5) <= kPsi + kEpsilon);
+  dirtran.AddConstraintToAllKnotPoints(x(6) >= kXDot - kEpsilon); // limit xdot
+  dirtran.AddConstraintToAllKnotPoints(x(6) <= kXDot + kEpsilon);
+  dirtran.AddConstraintToAllKnotPoints(x(7) >= kYDot - kEpsilon); // limit ydot
+  dirtran.AddConstraintToAllKnotPoints(x(7) <= kYDot + kEpsilon);
+  dirtran.AddConstraintToAllKnotPoints(x(8) >= kZDot - kEpsilon); // limit zdot
+  dirtran.AddConstraintToAllKnotPoints(x(8) <= kZDot + kEpsilon);
+  dirtran.AddConstraintToAllKnotPoints(x(9) >= kPhiDot - kEpsilon); // limit phidot
+  dirtran.AddConstraintToAllKnotPoints(x(9) <= kPhiDot + kEpsilon);
+  dirtran.AddConstraintToAllKnotPoints(x(10) >= kThetaDot - kEpsilon); // limit thetadot
+  dirtran.AddConstraintToAllKnotPoints(x(10) <= kThetaDot + kEpsilon);
+  dirtran.AddConstraintToAllKnotPoints(x(11) >= kPsiDot - kEpsilon); // limit psidot
+  dirtran.AddConstraintToAllKnotPoints(x(11) <= kPsiDot + kEpsilon);
 
   // Add initial state constraint
   Eigen::VectorXd initial_state = Eigen::VectorXd::Zero(12);
-  initial_state(2) = 10.0; // Z_0, start at height 10m, all the other states are 0
-  dirtran.AddLinearConstraint(dirtran.initial_state() == initial_state);
+  initial_state(2) = kZ; // Z_0, start at height 10m, all the other states are 0
+  initial_state(6) = kXDot;
+  dirtran.AddLinearConstraint(dirtran.initial_state()(0) == 0);
 
   std::cout << "initial state: " << initial_state << std::endl;
 
-  // Add initial input constraint
-  const double initial_tilt_angle = -M_PI/2.0; // initial configuration is a quadrotor
-  const double front_moment_arm = quad_tilt_wing_plant->front_joint_x();
-  const double rear_moment_arm = quad_tilt_wing_plant->rear_joint_x();
-  const double front_prop_f = UAV_fg/(rear_moment_arm + front_moment_arm) * rear_moment_arm / 2.0;
-  const double rear_prop_f = UAV_fg/(rear_moment_arm + front_moment_arm) * front_moment_arm / 2.0;
-  Eigen::Vector4d u0_prop{front_prop_f/kProp, front_prop_f/kProp,
-      rear_prop_f/kProp, rear_prop_f/kProp};
-  Eigen::VectorXd initial_input = Eigen::VectorXd::Zero(8);
-  initial_input.topRows(4) = u0_prop;
-  initial_input.bottomRows(4) = Eigen::VectorXd::Constant(4, initial_tilt_angle);
-  Eigen::VectorBlock<const solvers::VectorXDecisionVariable> u_0 = dirtran.input(0);
-  dirtran.AddLinearConstraint(u_0 == initial_input);
-
-
-  // Add final state constraint
-  // Expected final state  which is a trim point
-  Eigen::VectorXd final_state = Eigen::VectorXd::Zero(12);
-  final_state(0) = 500;  // for initial guess
-  final_state(2) = 20; // Z_N, try keeping the same height at final state
-  final_state(6) = 100.0; // dot_X, aim for 10m/s speed
-  dirtran.AddLinearConstraint(dirtran.final_state().tail(11) == final_state.tail(11));
-
-
-  std::cout << "final state: " << final_state << std::endl;
-
-
-  // Add final input constraint
-  Eigen::VectorXd final_input(8);
-//   final_input << 8297.58, 8297.58, 8288.65, 8288.6, -0.0283086, -0.0283086, -0.00999118, -0.00999118;  // for 50m/s
-  final_input << 1970.68, 1970.68, 1970.54, 1970.54, -0.00707841, -0.00707841, -0.00249764, -0.00249764;  // for 100m/s
-  const double kSlack_u_N_prop = 5;
-  const double kSlack_u_N_tilt = 1e-4;
-  Eigen::VectorBlock<const solvers::VectorXDecisionVariable> u_N = dirtran.input(kNumTimeSamples-1);
-  for (int i = 0; i < 4; i++) {
-    dirtran.AddLinearConstraint(u_N(i) >= final_input(i) - kSlack_u_N_prop);
-    dirtran.AddLinearConstraint(u_N(i) <= final_input(i) + kSlack_u_N_prop);
-  }
-  for (int i = 4; i < 8; i++) {
-    dirtran.AddLinearConstraint(u_N(i) >= final_input(i) - kSlack_u_N_tilt);
-    dirtran.AddLinearConstraint(u_N(i) <= final_input(i) + kSlack_u_N_tilt);
-  }
-
   // Add running cost
-  const double R_prop = 1e-6;  // Cost on input "effort".
+  const solvers::VectorXDecisionVariable& u = dirtran.input();
+  const double R_prop = 1e-7;  // Cost on input "effort".
   for (int i = 0; i < 4; i++) {
       dirtran.AddRunningCost(R_prop * u(i) * u(i));
   }
-  const double R_tilt = 0;  // Cost on input "effort".
+  const double R_tilt = 1;  // Cost on input "effort".
   for (int i = 4; i < 8; i++) {
       dirtran.AddRunningCost(R_tilt * u(i) * u(i));
   }
@@ -203,19 +163,20 @@ int DoMain() {
   // set initial guess
   const double timespan_init = (kNumTimeSamples - 1) * kMinimumTimeStep;
   auto traj_init_x = PiecewisePolynomial<double>::FirstOrderHold(
-      {0, timespan_init}, {initial_state, final_state});
-  auto initial_input_guess = initial_input;
-  auto final_input_guess = final_input;
+      {0, timespan_init}, {initial_state, initial_state});
+  Eigen::VectorXd initial_input_guess(8);
+  initial_input_guess.topRows(4) = Eigen::VectorXd::Constant(4, UAV_fg/4);
+  initial_input_guess.bottomRows(4) = Eigen::VectorXd::Constant(4, -M_PI/10.0);
   auto traj_init_u = PiecewisePolynomial<double>::FirstOrderHold(
-      {0, timespan_init}, {initial_input_guess, final_input_guess});
+      {0, timespan_init}, {initial_input_guess, initial_input_guess});
   dirtran.SetInitialTrajectory(traj_init_u, traj_init_x);
 
   // Set solver options
-  const double tol = 1e-4;
+  const double tol = 1e-6;
   solvers::IpoptSolver solver;
   dirtran.SetSolverOption(solvers::IpoptSolver::id(), "print_level", 3);
   dirtran.SetSolverOption(solvers::IpoptSolver::id(), "print_user_options", "yes");
-  dirtran.SetSolverOption(solvers::IpoptSolver::id(), "max_iter", 1000);
+  dirtran.SetSolverOption(solvers::IpoptSolver::id(), "max_iter", 2000);
   dirtran.SetSolverOption(solvers::IpoptSolver::id(), "constr_viol_tol", tol);
   dirtran.SetSolverOption(solvers::IpoptSolver::id(), "resto.constr_viol_tol", tol);
   dirtran.SetSolverOption(solvers::IpoptSolver::id(), "resto.constr_viol_tol", tol);
@@ -223,7 +184,7 @@ int DoMain() {
   dirtran.SetSolverOption(solvers::IpoptSolver::id(), "resto.acceptable_constr_viol_tol", tol);
   dirtran.SetSolverOption(solvers::IpoptSolver::id(), "acceptable_tol", tol);
   dirtran.SetSolverOption(solvers::IpoptSolver::id(), "tol", tol);
-  dirtran.SetSolverOption(solvers::IpoptSolver::id(), "output_file", "/Users/Hank/solver_output/traj_opt_50mps.txt");
+  dirtran.SetSolverOption(solvers::IpoptSolver::id(), "output_file", "/Users/Hank/solver_output/output_3.txt");
 
   SolutionResult result = solver.Solve(dirtran);
 

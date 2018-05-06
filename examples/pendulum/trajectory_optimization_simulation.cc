@@ -16,6 +16,7 @@
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/primitives/trajectory_source.h"
 #include "drake/systems/trajectory_optimization/direct_collocation.h"
+#include "drake/solvers/ipopt_solver.h"
 
 using drake::solvers::SolutionResult;
 
@@ -72,7 +73,27 @@ int DoMain() {
   auto traj_init_x = PiecewisePolynomial<double>::FirstOrderHold(
       {0, timespan_init}, {initial_state.get_value(), final_state.get_value()});
   dircol.SetInitialTrajectory(PiecewisePolynomial<double>(), traj_init_x);
-  SolutionResult result = dircol.Solve();
+
+
+  // Set solver options
+  solvers::IpoptSolver solver;
+  dircol.SetSolverOption(solvers::IpoptSolver::id(), "print_level", 5);
+  dircol.SetSolverOption(solvers::IpoptSolver::id(), "print_user_options", "yes");
+  dircol.SetSolverOption(solvers::IpoptSolver::id(), "max_iter", 100);
+  dircol.SetSolverOption(solvers::IpoptSolver::id(), "constr_viol_tol", 1e-4);
+  dircol.SetSolverOption(solvers::IpoptSolver::id(), "resto.constr_viol_tol", 1e-4);
+  dircol.SetSolverOption(solvers::IpoptSolver::id(), "resto.constr_viol_tol", 1e-4);
+  dircol.SetSolverOption(solvers::IpoptSolver::id(), "acceptable_constr_viol_tol", 1e-4);
+  dircol.SetSolverOption(solvers::IpoptSolver::id(), "resto.acceptable_constr_viol_tol", 1e-4);
+  dircol.SetSolverOption(solvers::IpoptSolver::id(), "acceptable_tol", 1e-4);
+  dircol.SetSolverOption(solvers::IpoptSolver::id(), "tol", 1e-4);
+  dircol.SetSolverOption(solvers::IpoptSolver::id(), "output_file", "/Users/Hank/solver_output/pendulum_3.txt");
+
+
+
+
+
+  SolutionResult result = solver.Solve(dircol);
   if (result != SolutionResult::kSolutionFound) {
     std::cerr << "Failed to solve optimization for the swing-up trajectory"
               << std::endl;

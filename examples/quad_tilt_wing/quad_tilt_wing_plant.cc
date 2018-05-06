@@ -92,12 +92,12 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
         // state = [X,Y,Z,phi,theta,psi,dot_X,dot_Y,dot_Z,dot_phi,dot_theta,dot_psi]
   VectorX<T> state = context.get_continuous_state_vector().CopyToVector();
 
-  
+
 
         // u = [omega_1^2, omega_2^2, omega_3^2, omega_4^2, theta_1, theta_2, theta_3, theta_4]
   VectorX<T> u = this->EvalVectorInput(context, 0)->get_value();        // get value from the input port, which is the controller
 
-  
+
 
   // Extract orientation, angular velocities and linear velocities.
   Vector3<T> rpy = state.segment(3, 3);
@@ -192,10 +192,10 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
   double r_s2 = r_s1;
   double r_s3 = rear_wing_len_/2;
   double r_s4 = r_s3;
-  double r_l1 = front_joint_x_ - 0.25*front_wing_wid_;
-  double r_l2 = r_l1;
-  double r_l3 = rear_joint_x_ + 0.25*rear_wing_wid_;
-  double r_l4 = r_l3;
+  auto r_l1 = front_joint_x_ - 0.25*front_wing_wid_*cos(tilt_angle(0));
+  auto r_l2 = front_joint_x_ - 0.25*front_wing_wid_*cos(tilt_angle(1));
+  auto r_l3 = rear_joint_x_ + 0.25*rear_wing_wid_*cos(tilt_angle(2));
+  auto r_l4 = rear_joint_x_ + 0.25*rear_wing_wid_*cos(tilt_angle(3));
   Vector3<T> M_w;
   M_w(0) = r_s1*F_w_1(2) - r_s2*F_w_2(2) + r_s3*F_w_3(2) - r_s4*F_w_4(2);
   M_w(1) = -r_l1*F_w_1(2) - r_l2*F_w_2(2) + r_l3*F_w_3(2) + r_l4*F_w_4(2);
@@ -247,7 +247,7 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
   // Recomposing the derivatives vector.
   VectorX<T> xdot(12);
   xdot << state.tail(6), xyz_ddot, rpy_ddot;
-  
+
   //~ std::cout << "inside plant, u is:" << u << std::endl;
   //~ std::cout << "inside plant, x is:" << state << std::endl;
   //~ std::cout << "inside plant, xdot is:" << xdot << std::endl;
@@ -317,13 +317,13 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerUpright(
     const QuadTiltWingPlant<double>* quad_tilt_wing_plant,
     Eigen::Vector3d nominal_position) {
   auto quad_tilt_wing_context_goal = quad_tilt_wing_plant->CreateDefaultContext();
-  
+
   double pitch_angle = 0;
   pitch_angle = - 80.0 / 180.0 * M_PI;
   //~ double pitch_angle = -M_PI/6;
-  
+
   std::cout << "Pitch angle: " << pitch_angle << std::endl;
-  
+
   Eigen::VectorXd x0 = Eigen::VectorXd::Zero(12);
   x0.topRows(3) = nominal_position;
   x0(4) = pitch_angle;
@@ -386,12 +386,12 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerWingtilt(
   double UAV_fg = quad_tilt_wing_plant->m() * quad_tilt_wing_plant->g();
   double c_f = front_moment_arm / (front_moment_arm + rear_moment_arm);
   double c_r = rear_moment_arm / (front_moment_arm + rear_moment_arm);
-  
+
   double rear_wing_tilt = - atan(c_f * tan(front_wing_tilt) / c_r);
-  
+
   double front_prop_f = UAV_fg * c_r / (-sin(front_wing_tilt)) / 2;
   double rear_prop_f = UAV_fg * c_f / (-sin(rear_wing_tilt)) / 2;
-  
+
   Eigen::Vector4d u0_prop{front_prop_f/quad_tilt_wing_plant->kProp(), front_prop_f/quad_tilt_wing_plant->kProp(),
       rear_prop_f/quad_tilt_wing_plant->kProp(), rear_prop_f/quad_tilt_wing_plant->kProp()};
   Eigen::Vector4d u0_tilt{front_wing_tilt, front_wing_tilt, rear_wing_tilt, rear_wing_tilt};

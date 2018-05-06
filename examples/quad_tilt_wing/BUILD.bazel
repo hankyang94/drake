@@ -199,9 +199,73 @@ drake_cc_binary(
         "//systems/primitives:trajectory_source",
         "//systems/trajectory_optimization:direct_collocation",
         "//systems/trajectory_optimization:direct_transcription",
+        "//solvers:ipopt_solver",
         "@gflags",
     ],
 )
+
+drake_cc_binary(
+    name = "run_quad_tilt_wing_traj_opt_simple",
+    srcs = ["run_quad_tilt_wing_traj_opt_simple.cc"],
+    add_test_rule = 1,
+    data = [":models"],
+    test_rule_args = [
+        "--target_realtime_rate=1",
+    ],
+    test_rule_size = "medium",
+    deps = [
+        ":quad_tilt_wing_plant",
+        "//common:find_resource",
+        "//lcm",
+        "//multibody:rigid_body_tree",
+        "//multibody:rigid_body_tree_construction",
+        "//multibody/parsers",
+        "//multibody/rigid_body_plant",
+        "//multibody/rigid_body_plant:drake_visualizer",
+        "//systems/analysis:simulator",
+        "//systems/framework:diagram",
+        "//systems/primitives:constant_vector_source",
+        "//systems/primitives:demultiplexer",
+        "//systems/primitives:multiplexer",
+        "//systems/primitives:trajectory_source",
+        "//systems/trajectory_optimization:direct_collocation",
+        "//systems/trajectory_optimization:direct_transcription",
+        "//solvers:ipopt_solver",
+        "@gflags",
+    ],
+)
+
+drake_cc_binary(
+    name = "run_quad_tilt_wing_fixed_point",
+    srcs = ["run_quad_tilt_wing_fixed_point.cc"],
+    add_test_rule = 1,
+    data = [":models"],
+    test_rule_args = [
+        "--target_realtime_rate=1",
+    ],
+    test_rule_size = "medium",
+    deps = [
+        ":quad_tilt_wing_plant",
+        "//common:find_resource",
+        "//lcm",
+        "//multibody:rigid_body_tree",
+        "//multibody:rigid_body_tree_construction",
+        "//multibody/parsers",
+        "//multibody/rigid_body_plant",
+        "//multibody/rigid_body_plant:drake_visualizer",
+        "//systems/analysis:simulator",
+        "//systems/framework:diagram",
+        "//systems/primitives:constant_vector_source",
+        "//systems/primitives:demultiplexer",
+        "//systems/primitives:multiplexer",
+        "//systems/primitives:trajectory_source",
+        "//systems/trajectory_optimization:direct_collocation",
+        "//systems/trajectory_optimization:direct_transcription",
+        "//solvers:ipopt_solver",
+        "@gflags",
+    ],
+)
+
 
 install_data()
 add_lint_tests()
