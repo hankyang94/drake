@@ -2,6 +2,8 @@
 #include <Eigen/Dense>
 #include <memory>
 #include <math.h>
+#include <fstream>
+#include <limits>
 
 #include <gflags/gflags.h>
 
@@ -38,6 +40,9 @@ DEFINE_double(target_realtime_rate, 0.1,
 
 int DoMain() {
 
+  std::cout << "Press Enter to Continue";
+  std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+
   lcm::DrakeLcm lcm;
   systems::DiagramBuilder<double> builder;
 
@@ -54,8 +59,8 @@ int DoMain() {
   auto context = quad_tilt_wing_plant.get()->CreateDefaultContext();
 
   const int kNumTimeSamples = 61;
-  const double kMinimumTimeStep = 0.3;
-  const double kMaximumTimeStep = 0.6;
+  const double kMinimumTimeStep = 0.4;
+  const double kMaximumTimeStep = 0.8;
   systems::trajectory_optimization::DirectCollocation dirtran(
       quad_tilt_wing_plant.get(), *context, kNumTimeSamples, kMinimumTimeStep, kMaximumTimeStep);
 
@@ -244,15 +249,24 @@ int DoMain() {
   std::cout << "u_samples: " << u_samples << std::endl;
   std::cout << "x_samples: " << x_samples << std::endl;
 
+  std::ofstream file("/Users/Hank/Dropbox (MIT)/Courses/6.832 Underactuated Robotics/Final Project/code/solver_output/traj_opt_sol_100mps_py");
+  if (file.is_open()) {
+    file << "t samples: " << '\n';
+    file << t_samples << '\n';
+    file << "u_samples: " << '\n';
+    file << u_samples << '\n';
+    file << "x_samples: " << '\n';
+    file << x_samples << '\n';
+  }
+
+
+
   const PiecewisePolynomial<double> pp_utraj =
       dirtran.ReconstructInputTrajectory();
   const PiecewisePolynomial<double> pp_xtraj =
       dirtran.ReconstructStateTrajectory();
 
   std::cout << "Retrived solution from solver. " << std::endl;
-
-  // std::cout << "pp_utraj: " << pp_utraj << std::endl;
-//   std::cout << "pp_xtraj: " << pp_xtraj << std::endl;
 
   auto input_trajectory = builder.AddSystem<systems::TrajectorySource>(pp_utraj);
   input_trajectory->set_name("input trajectory");
@@ -274,7 +288,7 @@ int DoMain() {
 
   // connect dynamics ports
 //   builder.Connect(quad_tilt_wing_plant->get_output_port(0), controller->get_input_port());
-//   builder.Connect(input_trajectory->get_output_port(), quad_tilt_wing_plant->get_input_port(0));
+//   builder.Connect(input_trajectory->get_output_port(), quad_tilt_wing_plant->get_input_port(0))
 
   builder.Connect(state_trajectory->get_output_port(), plant_demux->get_input_port(0));
   builder.Connect(input_trajectory->get_output_port(), controller_demux->get_input_port(0));
@@ -292,10 +306,17 @@ int DoMain() {
 
   simulator.set_target_realtime_rate(FLAGS_target_realtime_rate);
   simulator.Initialize();
-  simulator.StepTo(pp_xtraj.end_time());
+  simulator.StepTo(0.01);
 
+  char type_input;
+  std::cout << "Select target in drake visualizer. Type in [y] to continue simulation." << std::endl;
+  std::cin.ignore();
+  std::cin >> type_input;
+  if (type_input == 'y') {
+    std::cout << "User input is: " << type_input << std::endl;
+    simulator.StepTo(pp_xtraj.end_time());
+  }
   std::cout << "Simulation Done." << std::endl;
-
   return 0;
 }
 
