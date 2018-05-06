@@ -40,9 +40,6 @@ DEFINE_double(target_realtime_rate, 0.1,
 
 int DoMain() {
 
-  std::cout << "Press Enter to Continue";
-  std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
-
   lcm::DrakeLcm lcm;
   systems::DiagramBuilder<double> builder;
 
@@ -307,15 +304,11 @@ int DoMain() {
   simulator.set_target_realtime_rate(FLAGS_target_realtime_rate);
   simulator.Initialize();
   simulator.StepTo(0.01);
+  std::cout << "Pausing for 30 seconds, tune the visualizer please." << std::endl;
 
-  char type_input;
-  std::cout << "Select target in drake visualizer. Type in [y] to continue simulation." << std::endl;
-  std::cin.ignore();
-  std::cin >> type_input;
-  if (type_input == 'y') {
-    std::cout << "User input is: " << type_input << std::endl;
-    simulator.StepTo(pp_xtraj.end_time());
-  }
+  sleep(30);
+
+  simulator.StepTo(pp_xtraj.end_time());
   std::cout << "Simulation Done." << std::endl;
   return 0;
 }
