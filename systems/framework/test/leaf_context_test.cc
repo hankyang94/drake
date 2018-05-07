@@ -53,6 +53,15 @@ class LeafContextTest : public ::testing::Test {
         kGeneralizedPositionSize, kGeneralizedVelocitySize,
         kMiscContinuousStateSize));
 
+    // Reserve a discrete state with a single element of size 1, and verify
+    // that we can change it using get_mutable_discrete_state_vector().
+    std::vector<std::unique_ptr<BasicVector<double>>> xd_single;
+    xd_single.push_back(BasicVector<double>::Make({128.0}));
+    context_.set_discrete_state(
+        std::make_unique<DiscreteValues<double>>(std::move(xd_single)));
+    context_.get_mutable_discrete_state_vector()[0] = 192.0;
+    EXPECT_EQ(context_.get_discrete_state().get_vector()[0], 192.0);
+
     // Reserve a discrete state with two elements, of size 1 and size 2.
     std::vector<std::unique_ptr<BasicVector<double>>> xd;
     xd.push_back(BasicVector<double>::Make({128.0}));
@@ -79,31 +88,28 @@ class LeafContextTest : public ::testing::Test {
         std::move(abstract_params)));
   }
 
-  // Mocks up a descriptor sufficient to read a FreestandingInputPortValue
-  // connected to @p context at @p index.
-  static const BasicVector<double>* ReadVectorInputPort(
-      const Context<double>& context, int index) {
-    InputPortDescriptor<double> descriptor(nullptr, InputPortIndex(index),
-                                           kVectorValued, 0, nullopt);
-    return context.EvalVectorInput(nullptr, descriptor);
+  // Reads a FreestandingInputPortValue connected to @p context at @p index.
+  // Returns nullptr if the port is not connected.
+  const BasicVector<double>* ReadVectorInputPort(const Context<double>& context,
+                                                 int index) {
+    auto const free_value = context.MaybeGetFixedInputPortValue(index);
+    return free_value ? free_value->get_vector_data<double>() : nullptr;
   }
 
-  // Mocks up a descriptor sufficient to read a FreestandingInputPortValue
-  // connected to @p context at @p index.
-  static const std::string* ReadStringInputPort(const Context<double>& context,
-                                                int index) {
-    InputPortDescriptor<double> descriptor(nullptr, InputPortIndex(index),
-                                           kAbstractValued, 0, nullopt);
-    return context.EvalInputValue<std::string>(nullptr, descriptor);
+  // Reads a FreestandingInputPortValue connected to @p context at @p index.
+  const std::string* ReadStringInputPort(const Context<double>& context,
+                                         int index) {
+    auto const free_value = context.MaybeGetFixedInputPortValue(index);
+    return free_value
+               ? &free_value->get_abstract_data()->GetValue<std::string>()
+               : nullptr;
   }
 
-  // Mocks up a descriptor sufficient to read a FreestandingInputPortValue
-  // connected to @p context at @p index.
-  static const AbstractValue* ReadAbstractInputPort(
-      const Context<double>& context, int index) {
-    InputPortDescriptor<double> descriptor(nullptr, InputPortIndex(index),
-                                           kAbstractValued, 0, nullopt);
-    return context.EvalAbstractInput(nullptr, descriptor);
+  // Reads a FreestandingInputPortValue connected to @p context at @p index.
+  const AbstractValue* ReadAbstractInputPort(const Context<double>& context,
+                                             int index) {
+    auto const free_value = context.MaybeGetFixedInputPortValue(index);
+    return free_value ? free_value->get_abstract_data() : nullptr;
   }
 
   LeafContext<double> context_;
