@@ -421,6 +421,38 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerWingtilt(
       *quad_tilt_wing_plant, *quad_tilt_wing_context_goal, Q, R);
 }
 
+std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerTrimPoint(
+            const QuadTiltWingPlant<double>* quad_tilt_wing_plant,
+            Eigen::VectorXd trim_point_state, Eigen::VectorXd trim_point_input) {
+      auto quad_tilt_wing_context_goal = quad_tilt_wing_plant->CreateDefaultContext();
+      Eigen::VectorXd x0 = Eigen::VectorXd::Zero(12);
+      x0 = trim_point_state;
+
+      std::cout << "x0: " << x0 << std::endl;
+
+      Eigen::VectorXd u0(8);
+      u0 = trim_point_input;
+
+      std::cout << "u0: " << u0 << std::endl;
+
+      quad_tilt_wing_context_goal->FixInputPort(0, u0);
+      quad_tilt_wing_plant->set_state(quad_tilt_wing_context_goal.get(), x0);              //where is the linearization part?
+
+      // Setup LQR cost matrices
+      Eigen::MatrixXd Q = Eigen::MatrixXd::Identity(12, 12);
+      Q.topLeftCorner<6, 6>() = 10 * Eigen::MatrixXd::Identity(6, 6);
+      Q.topLeftCorner<1, 1>() = 0 * 10 * Eigen::MatrixXd::Identity(1, 1);  // do not punish X position
+
+      Eigen::MatrixXd R = Eigen::MatrixXd::Identity(8, 8);
+      R.topLeftCorner<4, 4>() = 1e-8 * Eigen::MatrixXd::Identity(4, 4);
+      R.bottomRightCorner<4, 4>() = 1e2 * Eigen::MatrixXd::Identity(4, 4);
+
+      std::cout << "GOT Q and R." << std::endl;
+
+      return systems::controllers::LinearQuadraticRegulator(
+              *quad_tilt_wing_plant, *quad_tilt_wing_context_goal, Q, R);
+}
+
 
 std::unique_ptr<systems::AffineSystem<double>> ArbitraryController(
     const QuadTiltWingPlant<double>* quad_tilt_wing_plant, Eigen::VectorXd arbitrary_control) {

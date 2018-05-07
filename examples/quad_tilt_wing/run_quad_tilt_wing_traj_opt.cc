@@ -34,7 +34,7 @@ using namespace Eigen;
 
 namespace {
 
-DEFINE_double(target_realtime_rate, 1,
+DEFINE_double(target_realtime_rate, 0.4,
               "Playback speed.  See documentation for "
               "Simulator::set_target_realtime_rate() for details.");
 
@@ -161,6 +161,14 @@ int DoMain() {
   Eigen::VectorBlock<const solvers::VectorXDecisionVariable> u_0 = dirtran.input(0);
   dirtran.AddLinearConstraint(u_0 == initial_input);
 
+  // Add tilt-speed limit constraint
+  const double kTiltSpeedLimit = M_PI / 30.0; // limit the tilting speed
+  for (int i=1; i<(kNumTimeSamples); i++){
+    dirtran.AddLinearConstraint(dirtran.input(i).segment(4,1) - dirtran.input(i-1).segment(4,1) >= -kTiltSpeedLimit*dirtran.timestep(i-1));
+    dirtran.AddLinearConstraint(dirtran.input(i).segment(4,1) - dirtran.input(i-1).segment(4,1) <= kTiltSpeedLimit*dirtran.timestep(i-1));
+    dirtran.AddLinearConstraint(dirtran.input(i).segment(6,1) - dirtran.input(i-1).segment(6,1) >= -kTiltSpeedLimit*dirtran.timestep(i-1));
+    dirtran.AddLinearConstraint(dirtran.input(i).segment(6,1) - dirtran.input(i-1).segment(6,1) <= kTiltSpeedLimit*dirtran.timestep(i-1));
+  }
 
   // Add final state constraint
   // Expected final state  which is a trim point
@@ -225,7 +233,8 @@ int DoMain() {
   dirtran.SetSolverOption(solvers::IpoptSolver::id(), "resto.acceptable_constr_viol_tol", tol);
   dirtran.SetSolverOption(solvers::IpoptSolver::id(), "acceptable_tol", tol);
   dirtran.SetSolverOption(solvers::IpoptSolver::id(), "tol", tol);
-  dirtran.SetSolverOption(solvers::IpoptSolver::id(), "output_file", "/home/hank/solver_output/traj_opt_100mps.txt");
+  dirtran.SetSolverOption(solvers::IpoptSolver::id(), "output_file", "/home/klytech/solver_output/traj_opt_100mps.txt");
+  //~ dirtran.SetSolverOption(solvers::IpoptSolver::id(), "output_file", "/home/hank/solver_output/traj_opt_100mps.txt");
 //  dirtran.SetSolverOption(solvers::IpoptSolver::id(), "output_file", "/Users/Hank/solver_output/traj_opt_100mps.txt");
 
   SolutionResult result = solver.Solve(dirtran);
@@ -247,7 +256,8 @@ int DoMain() {
   std::cout << "u_samples: " << u_samples << std::endl;
   std::cout << "x_samples: " << x_samples << std::endl;
 
-  std::ofstream file("/home/hank/solver_output/traj_opt_sol_100mps_py.txt");
+  std::ofstream file("/home/klytech/solver_output/traj_opt_sol_100mps_py.txt");
+//  std::ofstream file("/home/hank/solver_output/traj_opt_sol_100mps_py.txt");
 //  std::ofstream file(
 //          "/Users/Hank/Dropbox (MIT)/Courses/6.832 Underactuated Robotics/Final Project/code/solver_output/traj_opt_sol_100mps_py");
   if (file.is_open()) {
