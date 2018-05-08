@@ -133,6 +133,14 @@ std::unique_ptr<AffineSystem<double>> LinearQuadraticRegulator(
     const Eigen::Ref<const Eigen::MatrixXd>& R,
     const Eigen::Ref<const Eigen::MatrixXd>& N =
         Eigen::Matrix<double, 0, 0>::Zero());
+        
+/// Added by hankyang94 to implement LQR controller for trim point      
+std::unique_ptr<AffineSystem<double>> LinearQuadraticRegulatorTrim(
+    const System<double>& system, const Context<double>& context,
+    const Eigen::Ref<const Eigen::MatrixXd>& Q,
+    const Eigen::Ref<const Eigen::MatrixXd>& R,
+    const Eigen::Ref<const Eigen::MatrixXd>& N =
+        Eigen::Matrix<double, 0, 0>::Zero());
 
 }  // namespace controllers
 }  // namespace systems

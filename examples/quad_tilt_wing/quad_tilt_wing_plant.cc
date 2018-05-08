@@ -449,7 +449,7 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerTrimPoint
 
       std::cout << "GOT Q and R." << std::endl;
 
-      return systems::controllers::LinearQuadraticRegulator(
+      return systems::controllers::LinearQuadraticRegulatorTrim(
               *quad_tilt_wing_plant, *quad_tilt_wing_context_goal, Q, R);
 }
 

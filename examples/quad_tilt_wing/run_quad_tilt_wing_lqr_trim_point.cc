@@ -25,7 +25,7 @@
 #include "drake/systems/primitives/demultiplexer.h"
 
 DEFINE_int32(simulation_trials, 1, "Number of trials to simulate.");
-DEFINE_double(simulation_real_time_rate, 1, "Real time rate");
+DEFINE_double(simulation_real_time_rate, 0.1, "Real time rate");
 DEFINE_double(trial_duration, 10, "Duration of execution of each trial");
 
 namespace drake {
@@ -128,6 +128,14 @@ int do_main() {
 
     simulator.Initialize();
     simulator.set_target_realtime_rate(FLAGS_simulation_real_time_rate);
+    simulator.StepTo(0.00001);
+    std::cout << "Pausing for 30 seconds, tune the visualizer please." << std::endl;
+    sleep(10);
+    std::cout << "20s left." << std::endl;
+    sleep(10);
+    std::cout << "10s left." << std::endl;
+    sleep(10);
+    std::cout << "Simulation starts!" << std::endl;
     simulator.StepTo(FLAGS_trial_duration);
 
     //~ // Goal state verification.
