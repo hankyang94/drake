@@ -13,7 +13,6 @@
 #include "drake/systems/primitives/time_varying_data.h"
 #include "drake/systems/primitives/piecewise_polynomial_affine_system.h"
 
-
 using Eigen::Matrix3d;
 
 namespace drake {
@@ -457,7 +456,7 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerTrimPoint
               *quad_tilt_wing_plant, *quad_tilt_wing_context_goal, Q, R);
 }
 
-    std::unique_ptr<systems::TimeVaryingAffineSystem<double>> TVLQR(
+std::unique_ptr<systems::TimeVaryingAffineSystem<double>> TVLQR(
             const QuadTiltWingPlant<double>* quad_tilt_wing_plant,
             const trajectories::PiecewisePolynomial<double>& u_traj,
             const trajectories::PiecewisePolynomial<double>& x_traj,
@@ -480,7 +479,7 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerTrimPoint
       const double total_time = x_traj.end_time();
       const int num_time_steps = int (total_time / time_period);
       std::vector<MatrixX<double>> K(num_time_steps);
-      for (int i = 0; i<num_time_steps; i++){
+      for (int i = 0; i<num_time_steps+1; i++){
         Eigen::VectorXd x0 = x_traj.value(i*time_period);
         Eigen::VectorXd u0 = u_traj.value(i*time_period);
         quad_tilt_wing_context_goal->FixInputPort(0,u0);
@@ -492,10 +491,10 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerTrimPoint
                                            R, N)
                 : systems::controllers::DiscreteTimeLinearQuadraticRegulator(linear_system->A(),
                                                        linear_system->B(), Q, R);
-        K(i) << lqr_result.K;
+        K[i] << lqr_result.K;
       }
       auto K_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(
-              Eigen::VectorXd::Linspace(time_period, 0, total_time), K);
+              linspace(0., num_time_steps*time_period, num_time_steps+1), K);
       auto A_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(
               {0, total_time}, {Eigen::Matrix<double, 0, 0>::Zero(), Eigen::Matrix<double, 0, 0>::Zero()});
       auto B_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(
@@ -507,7 +506,7 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerTrimPoint
       const systems::TimeVaryingData data(A_traj, B_traj, f0_traj,
                                  C_traj, -K_traj, u_traj + K_traj * x_traj);
       return std::make_unique<systems::PiecewisePolynomialAffineSystem<double>>(data, 0);
-    }
+}
 
 
 std::unique_ptr<systems::AffineSystem<double>> ArbitraryController(
@@ -530,6 +529,17 @@ std::unique_ptr<systems::AffineSystem<double>> ArbitraryController(
           D,  // D
           arbitrary_control,                // y0
           0.0);
+}
+
+template <typename T>
+std::vector<T> linspace(T a, T b, size_t N) {
+    T h = (b - a) / static_cast<T>(N-1);
+    std::vector<T> xs(N);
+    typename std::vector<T>::iterator x;
+    T val;
+    for (x = xs.begin(), val = a; x != xs.end(); ++x, val += h)
+        *x = val;
+    return xs;
 }
 
 }  // namespace quad_tilt_wing

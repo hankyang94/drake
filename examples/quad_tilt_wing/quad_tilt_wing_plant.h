@@ -124,6 +124,8 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerTrimPoint
 std::unique_ptr<systems::AffineSystem<double>> ArbitraryController(
     const QuadTiltWingPlant<double>* quad_tilt_wing_plant, Eigen::VectorXd arbitrary_control);
 
+template <typename T>
+std::vector<T> linspace(T a, T b, size_t N);
     
 }  // namespace quad_tilt_wing
 }  // namespace examples
