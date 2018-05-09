@@ -9,6 +9,10 @@
 #include "drake/math/roll_pitch_yaw.h"
 #include "drake/systems/controllers/linear_quadratic_regulator.h"
 #include "drake/util/drakeGeometryUtil.h"
+#include "drake/systems/primitives/linear_system.h"
+#include "drake/systems/primitives/time_varying_data.h"
+#include "drake/systems/primitives/piecewise_polynomial_affine_system.h"
+
 
 using Eigen::Matrix3d;
 
@@ -452,6 +456,58 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerTrimPoint
       return systems::controllers::LinearQuadraticRegulatorTrim(
               *quad_tilt_wing_plant, *quad_tilt_wing_context_goal, Q, R);
 }
+
+    std::unique_ptr<systems::TimeVaryingAffineSystem<double>> TVLQR(
+            const QuadTiltWingPlant<double>* quad_tilt_wing_plant,
+            const trajectories::PiecewisePolynomial<double>& u_traj,
+            const trajectories::PiecewisePolynomial<double>& x_traj,
+            const Eigen::Ref<const Eigen::MatrixXd>& N) {
+        auto quad_tilt_wing_context_goal = quad_tilt_wing_plant->CreateDefaultContext();
+
+      // Setup LQR cost matrices
+      Eigen::MatrixXd Q = Eigen::MatrixXd::Identity(12, 12);
+      Q.topLeftCorner<6, 6>() = 10 * Eigen::MatrixXd::Identity(6, 6);
+
+      Eigen::MatrixXd R = Eigen::MatrixXd::Identity(8, 8);
+      R.topLeftCorner<4, 4>() = 1e-8 * Eigen::MatrixXd::Identity(4, 4);
+      R.bottomRightCorner<4, 4>() = 1e2 * Eigen::MatrixXd::Identity(4, 4);
+
+      std::cout << "GOT Q and R." << std::endl;
+      const int num_inputs = quad_tilt_wing_plant->get_input_port(0).size(),
+              num_states = quad_tilt_wing_context_goal->get_num_total_states();
+      const double equilibrium_check_tolerance = 1e6;
+      const double time_period = 1e-3;
+      const double total_time = x_traj.end_time();
+      const int num_time_steps = int (total_time / time_period);
+      std::vector<MatrixX<double>> K(num_time_steps);
+      for (int i = 0; i<num_time_steps; i++){
+        Eigen::VectorXd x0 = x_traj.value(i*time_period);
+        Eigen::VectorXd u0 = u_traj.value(i*time_period);
+        quad_tilt_wing_context_goal->FixInputPort(0,u0);
+        quad_tilt_wing_plant->set_state(quad_tilt_wing_context_goal.get(), x0);
+        auto linear_system = Linearize(*quad_tilt_wing_plant, *quad_tilt_wing_context_goal, 0, -3, equilibrium_check_tolerance);
+        systems::controllers::LinearQuadraticRegulatorResult lqr_result =
+                (linear_system->time_period() == 0.0)
+                ? systems::controllers::LinearQuadraticRegulator(linear_system->A(), linear_system->B(), Q,
+                                           R, N)
+                : systems::controllers::DiscreteTimeLinearQuadraticRegulator(linear_system->A(),
+                                                       linear_system->B(), Q, R);
+        K(i) << lqr_result.K;
+      }
+      auto K_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(
+              Eigen::VectorXd::Linspace(time_period, 0, total_time), K);
+      auto A_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(
+              {0, total_time}, {Eigen::Matrix<double, 0, 0>::Zero(), Eigen::Matrix<double, 0, 0>::Zero()});
+      auto B_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(
+              {0, total_time}, {Eigen::MatrixXd::Zero(0, num_states), Eigen::MatrixXd::Zero(0, num_states)});
+      auto f0_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(
+              {0, total_time}, {Eigen::Matrix<double, 0, 1>::Zero(),  Eigen::Matrix<double, 0, 1>::Zero()});
+      auto C_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(
+              {0, total_time}, {Eigen::MatrixXd::Zero(num_inputs, 0), Eigen::MatrixXd::Zero(num_inputs, 0)});
+      const systems::TimeVaryingData data(A_traj, B_traj, f0_traj,
+                                 C_traj, -K_traj, u_traj + K_traj * x_traj);
+      return std::make_unique<systems::PiecewisePolynomialAffineSystem<double>>(data, 0);
+    }
 
 
 std::unique_ptr<systems::AffineSystem<double>> ArbitraryController(

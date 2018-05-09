@@ -7,6 +7,8 @@
 #include "drake/systems/framework/basic_vector.h"
 #include "drake/systems/framework/leaf_system.h"
 #include "drake/systems/primitives/affine_system.h"
+#include "drake/systems/primitives/linear_system.h"
+#include "drake/common/trajectories/piecewise_polynomial.h"
 
 namespace drake {
 namespace examples {
@@ -110,6 +112,14 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerWingtilt(
 std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerTrimPoint(
         const QuadTiltWingPlant<double>* quad_tilt_wing_plant,
         Eigen::VectorXd trim_point_state, Eigen::VectorXd trim_point_input);
+
+/// Added by hankyang94 to implement Time-Varying LQR controller
+    std::unique_ptr<systems::TimeVaryingAffineSystem<double>> TimeVaryingLinearQuadraticRegulator(
+            const QuadTiltWingPlant<double>* quad_tilt_wing_plant,
+            const trajectories::PiecewisePolynomial<double>& u_traj,
+            const trajectories::PiecewisePolynomial<double>& x_traj,
+            const Eigen::Ref<const Eigen::MatrixXd>& N =
+            Eigen::Matrix<double, 0, 0>::Zero());
 
 std::unique_ptr<systems::AffineSystem<double>> ArbitraryController(
     const QuadTiltWingPlant<double>* quad_tilt_wing_plant, Eigen::VectorXd arbitrary_control);

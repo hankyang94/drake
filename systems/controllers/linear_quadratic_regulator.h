@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "drake/systems/primitives/linear_system.h"
+#include "drake/common/trajectories/piecewise_polynomial.h"
 
 namespace drake {
 namespace systems {
@@ -141,6 +142,7 @@ std::unique_ptr<AffineSystem<double>> LinearQuadraticRegulatorTrim(
     const Eigen::Ref<const Eigen::MatrixXd>& R,
     const Eigen::Ref<const Eigen::MatrixXd>& N =
         Eigen::Matrix<double, 0, 0>::Zero());
+
 
 }  // namespace controllers
 }  // namespace systems

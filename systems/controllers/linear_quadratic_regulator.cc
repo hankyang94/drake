@@ -8,6 +8,8 @@
 #include "drake/math/continuous_algebraic_riccati_equation.h"
 #include "drake/math/discrete_algebraic_riccati_equation.h"
 #include "drake/systems/primitives/linear_system.h"
+#include "drake/systems/primitives/time_varying_data.h"
+#include "drake/systems/primitives/piecewise_polynomial_affine_system.h"
 
 namespace drake {
 namespace systems {
@@ -221,7 +223,6 @@ std::unique_ptr<systems::AffineSystem<double>> LinearQuadraticRegulatorTrim(
       u0 + K * x0,                // y0
       linear_system->time_period());
 }
-
 
 
 }  // namespace controllers

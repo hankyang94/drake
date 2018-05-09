@@ -98,11 +98,14 @@ drake_cc_library(
     srcs = ["linear_quadratic_regulator.cc"],
     hdrs = ["linear_quadratic_regulator.h"],
     deps = [
+        "//common/trajectories:piecewise_polynomial",
         "//common:is_approx_equal_abstol",
         "//math:continuous_algebraic_riccati_equation",
         "//math:discrete_algebraic_riccati_equation",
         "//systems/framework",
         "//systems/primitives:linear_system",
+        "//systems/primitives:time_varying_data",
+        "//systems/primitives:piecewise_polynomial_affine_system",
     ],
 )
 
