@@ -1,3 +1,4 @@
+#include <iostream>
 #include "drake/systems/primitives/time_varying_data.h"
 
 namespace drake {
@@ -40,6 +41,7 @@ TimeVaryingData::TimeVaryingData(const PiecewisePolynomial<double>& Ain,
       C(Cin),
       D(Din),
       y0(y0in) {
+		  std::cout << "Created TVdata." << std::endl;
   DRAKE_DEMAND(A.get_number_of_segments() ==
                B.get_number_of_segments());
   DRAKE_DEMAND(A.get_number_of_segments() ==

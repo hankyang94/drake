@@ -456,16 +456,22 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerTrimPoint
               *quad_tilt_wing_plant, *quad_tilt_wing_context_goal, Q, R);
 }
 
-std::unique_ptr<systems::TimeVaryingAffineSystem<double>> TVLQR(
+std::unique_ptr<systems::TimeVaryingAffineSystem<double>> TimeVaryingLinearQuadraticRegulator(
             const QuadTiltWingPlant<double>* quad_tilt_wing_plant,
             const trajectories::PiecewisePolynomial<double>& u_traj,
             const trajectories::PiecewisePolynomial<double>& x_traj,
             const Eigen::Ref<const Eigen::MatrixXd>& N) {
-        auto quad_tilt_wing_context_goal = quad_tilt_wing_plant->CreateDefaultContext();
 
+//      double total_time = x_traj.end_time();
+      std::vector<double> segment_times = x_traj.get_segment_times();
+      int num_segments = int (segment_times.size());
+      std::cout << "num_segments: " << num_segments << std::endl;
+      Eigen::VectorXd segment_times_eigen = Eigen::Map<Eigen::VectorXd, Eigen::Unaligned>(segment_times.data(), segment_times.size());
+      std::cout << "segment times: " << segment_times_eigen << std::endl;
+      auto quad_tilt_wing_context_goal = quad_tilt_wing_plant->CreateDefaultContext();
       // Setup LQR cost matrices
       Eigen::MatrixXd Q = Eigen::MatrixXd::Identity(12, 12);
-      Q.topLeftCorner<6, 6>() = 10 * Eigen::MatrixXd::Identity(6, 6);
+      Q.topLeftCorner<6, 6>() =  10 * Eigen::MatrixXd::Identity(6, 6);
 
       Eigen::MatrixXd R = Eigen::MatrixXd::Identity(8, 8);
       R.topLeftCorner<4, 4>() = 1e-8 * Eigen::MatrixXd::Identity(4, 4);
@@ -473,15 +479,15 @@ std::unique_ptr<systems::TimeVaryingAffineSystem<double>> TVLQR(
 
       std::cout << "GOT Q and R." << std::endl;
       const int num_inputs = quad_tilt_wing_plant->get_input_port(0).size(),
-              num_states = quad_tilt_wing_context_goal->get_num_total_states();
+                num_states = quad_tilt_wing_context_goal->get_num_total_states();
+      std::cout << "num_inputs: " << num_inputs << std::endl;
+      std::cout << "num_states: " << num_states << std::endl;
       const double equilibrium_check_tolerance = 1e6;
-      const double time_period = 1e-3;
-      const double total_time = x_traj.end_time();
-      const int num_time_steps = int (total_time / time_period);
-      std::vector<MatrixX<double>> K(num_time_steps);
-      for (int i = 0; i<num_time_steps+1; i++){
-        Eigen::VectorXd x0 = x_traj.value(i*time_period);
-        Eigen::VectorXd u0 = u_traj.value(i*time_period);
+      std::vector<MatrixX<double>> K;
+      std::vector<MatrixX<double>> D;
+      for (int i = 0; i<num_segments; i++){
+        Eigen::VectorXd x0 = x_traj.value(segment_times[i]);
+        Eigen::VectorXd u0 = u_traj.value(segment_times[i]);
         quad_tilt_wing_context_goal->FixInputPort(0,u0);
         quad_tilt_wing_plant->set_state(quad_tilt_wing_context_goal.get(), x0);
         auto linear_system = Linearize(*quad_tilt_wing_plant, *quad_tilt_wing_context_goal, 0, -3, equilibrium_check_tolerance);
@@ -491,21 +497,67 @@ std::unique_ptr<systems::TimeVaryingAffineSystem<double>> TVLQR(
                                            R, N)
                 : systems::controllers::DiscreteTimeLinearQuadraticRegulator(linear_system->A(),
                                                        linear_system->B(), Q, R);
-        K[i] << lqr_result.K;
+//        std::cout << "Inside TVLQR, K is: " << lqr_result.K << std::endl;
+        K.push_back(lqr_result.K);
+        D.push_back(lqr_result.K*(-1.0));
       }
-      auto K_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(
-              linspace(0., num_time_steps*time_period, num_time_steps+1), K);
-      auto A_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(
-              {0, total_time}, {Eigen::Matrix<double, 0, 0>::Zero(), Eigen::Matrix<double, 0, 0>::Zero()});
-      auto B_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(
-              {0, total_time}, {Eigen::MatrixXd::Zero(0, num_states), Eigen::MatrixXd::Zero(0, num_states)});
-      auto f0_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(
-              {0, total_time}, {Eigen::Matrix<double, 0, 1>::Zero(),  Eigen::Matrix<double, 0, 1>::Zero()});
-      auto C_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(
-              {0, total_time}, {Eigen::MatrixXd::Zero(num_inputs, 0), Eigen::MatrixXd::Zero(num_inputs, 0)});
-      const systems::TimeVaryingData data(A_traj, B_traj, f0_traj,
-                                 C_traj, -K_traj, u_traj + K_traj * x_traj);
-      return std::make_unique<systems::PiecewisePolynomialAffineSystem<double>>(data, 0);
+
+      std::cout << "Finished calculating K's." << std::endl;
+    trajectories::PiecewisePolynomial<double> K_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(segment_times, K);
+      std::cout << "Generated K trajectory." << std::endl;
+
+      std::cout << "K test: " << K_traj.value(10.3) << std::endl;
+
+      std::vector<MatrixX<double>> A;
+      for (int i = 0; i<num_segments; i++){
+          A.push_back(Eigen::Matrix<double, 1, 1>::Zero());
+      }
+    trajectories::PiecewisePolynomial<double> A_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(segment_times, A);
+    std::cout << "A test: " << A_traj.value(10.3) << std::endl;
+
+      std::vector<MatrixX<double>> B;
+      for (int i = 0; i<num_segments; i++){
+          B.push_back(Eigen::MatrixXd::Zero(1, num_states));
+      }
+    trajectories::PiecewisePolynomial<double> B_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(segment_times, B);
+      std::cout << "Generated B trajectory." << std::endl;
+    std::cout << "B test: " << B_traj.value(10.3) << std::endl;
+
+    std::vector<MatrixX<double>> f0;
+    for (int i = 0; i<num_segments; i++){
+        f0.push_back(Eigen::Matrix<double, 1, 1>::Zero());
+    }
+    trajectories::PiecewisePolynomial<double> f0_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(segment_times, f0);
+    std::cout << "Generated f0 trajectory." << std::endl;
+    std::cout << "f0 test: " << f0_traj.value(10.3) << std::endl;
+
+    std::vector<MatrixX<double>> C;
+    for (int i = 0; i<num_segments; i++){
+        C.push_back(Eigen::MatrixXd::Zero(num_inputs, 1));
+    }
+    trajectories::PiecewisePolynomial<double> C_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(segment_times, C);
+    std::cout << "Generated C trajectory." << std::endl;
+    std::cout << "C test: " << C_traj.value(10.3) << std::endl;
+
+    std::vector<MatrixX<double>> y0;
+    for (int i = 0; i<num_segments; i++){
+        y0.push_back(u_traj.value(segment_times[i]) + K[i] * x_traj.value(segment_times[i]));
+    }
+
+    trajectories::PiecewisePolynomial<double> y0_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(segment_times, y0);
+    std::cout << "Generated y0 trajectory." << std::endl;
+    std::cout << "y0 test: " << y0_traj.value(10.3) << std::endl;
+
+    trajectories::PiecewisePolynomial<double> D_traj = trajectories::PiecewisePolynomial<double>::FirstOrderHold(segment_times, D);
+
+    // test u_0
+    std::cout << "x0 is: " << x_traj.value(0) << std::endl;
+    std::cout << "K0 is: " << K_traj.value(0) << std::endl;
+    std::cout << "y0 is: " << y0_traj.value(0) << std::endl;
+    std::cout << "u0 is: " << u_traj.value(0) << std::endl;
+
+    const systems::TimeVaryingData data = systems::TimeVaryingData(A_traj, B_traj, f0_traj, C_traj, D_traj, y0_traj);
+    return std::make_unique<systems::PiecewisePolynomialAffineSystem<double>>(data, 0);
 }
 
 
@@ -531,16 +583,18 @@ std::unique_ptr<systems::AffineSystem<double>> ArbitraryController(
           0.0);
 }
 
-template <typename T>
-std::vector<T> linspace(T a, T b, size_t N) {
-    T h = (b - a) / static_cast<T>(N-1);
-    std::vector<T> xs(N);
-    typename std::vector<T>::iterator x;
-    T val;
-    for (x = xs.begin(), val = a; x != xs.end(); ++x, val += h)
-        *x = val;
-    return xs;
-}
+    template <typename T>
+    std::vector<T> linspace(T a, T b, size_t N) {
+        T h = (b - a) / static_cast<T>(N-1);
+        std::vector<T> xs(N);
+        typename std::vector<T>::iterator x;
+        T val;
+        for (x = xs.begin(), val = a; x != xs.end(); ++x, val += h)
+            *x = val;
+        return xs;
+    }
+
+
 
 }  // namespace quad_tilt_wing
 }  // namespace examples
