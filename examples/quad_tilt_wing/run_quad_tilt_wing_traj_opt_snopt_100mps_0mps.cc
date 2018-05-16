@@ -265,8 +265,8 @@ int DoMain() {
   auto context = quad_tilt_wing_plant.get()->CreateDefaultContext();
 
   const int kNumTimeSamples = 61;
-  const double kMinimumTimeStep = 0.3;
-  const double kMaximumTimeStep = 0.8;
+  const double kMinimumTimeStep = 0.4;
+  const double kMaximumTimeStep = 1.0;
   systems::trajectory_optimization::DirectCollocation dirtran(
       quad_tilt_wing_plant.get(), *context, kNumTimeSamples, kMinimumTimeStep, kMaximumTimeStep);
 
@@ -305,8 +305,8 @@ int DoMain() {
   const double kXLowerLimit = -5.0;
   const double kXUpperLimit = 2000;
   const double kYLimit = 1;
-  const double kZLowerLimit = -500;
-  const double kZUpperLimit = 500;
+  const double kZLowerLimit = -2000;
+  const double kZUpperLimit = 2000;
   const double kPhiLimit = M_PI/200;
   const double kThetaLimit = M_PI/200;
   const double kPsiLimit = M_PI/200;
@@ -314,7 +314,7 @@ int DoMain() {
   const double kXDotLowerLimit = -5.0;
   const double kXDotUpperLimit = 120.0;
   const double kYDotLimit = 1;
-  const double kZDotLimit = 50;
+  const double kZDotLimit = 100;
   const double kPhiDotLimit = M_PI/400;
   const double kThetaDotLimit = M_PI/400;
   const double kPsiDotLimit = M_PI/400;
@@ -386,7 +386,7 @@ int DoMain() {
   // Add final state constraint
   Eigen::VectorXd final_state = Eigen::VectorXd::Zero(12);
   final_state(0) = 1000;  // for initial guess
-  final_state(2) = 10; // Z_N, try keeping the same height at final state
+  final_state(2) = 1000; // Z_N, try keeping the same height at final state
   final_state(6) = 0.0;
   dirtran.AddLinearConstraint(dirtran.final_state().tail(9) == final_state.tail(9));
 
@@ -443,7 +443,7 @@ int DoMain() {
   solvers::SnoptSolver solver;
 //  dirtran.SetSolverOption(solvers::SnoptSolver::id(),
 //                          "Print file", "/home/klytech/solver_output/traj_opt_100mps_snopt.txt");
-  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Scale option", 2);
+  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Scale option", 1);
   dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Iteration limit", 64000);
   dirtran.SetSolverOption(solvers::SnoptSolver::id(),
                           "Print file", "/Users/Hank/solver_output/transform_100mps_0mps_snopt_new.txt");

@@ -62,23 +62,23 @@ int DoMain() {
   auto context = quad_tilt_wing_plant->CreateDefaultContext();
 
   // Add initial state constraint
-  Eigen::VectorXd initial_state = Eigen::VectorXd::Zero(12);
-  initial_state(2) = 10.0; // Z_0, start at height 10m, all the other states are 0
-
-  std::cout << "initial state: " << initial_state << std::endl;
-
-  // Add initial input constraint
-  const double UAV_fg = quad_tilt_wing_plant->m() * quad_tilt_wing_plant->g();
-  const double initial_tilt_angle = -M_PI/2.0; // initial configuration is a quadrotor
-  const double front_moment_arm = quad_tilt_wing_plant->front_joint_x();
-  const double rear_moment_arm = quad_tilt_wing_plant->rear_joint_x();
-  const double front_prop_f = UAV_fg/(rear_moment_arm + front_moment_arm) * rear_moment_arm / 2.0;
-  const double rear_prop_f = UAV_fg/(rear_moment_arm + front_moment_arm) * front_moment_arm / 2.0;
-  Eigen::Vector4d u0_prop{front_prop_f, front_prop_f,
-      rear_prop_f, rear_prop_f};
-  Eigen::VectorXd initial_input = Eigen::VectorXd::Zero(8);
-  initial_input.topRows(4) = u0_prop;
-  initial_input.bottomRows(4) = Eigen::VectorXd::Constant(4, initial_tilt_angle);
+//  Eigen::VectorXd initial_state = Eigen::VectorXd::Zero(12);
+//  initial_state(2) = 10.0; // Z_0, start at height 10m, all the other states are 0
+//
+//  std::cout << "initial state: " << initial_state << std::endl;
+//
+//  // Add initial input constraint
+//  const double UAV_fg = quad_tilt_wing_plant->m() * quad_tilt_wing_plant->g();
+//  const double initial_tilt_angle = -M_PI/2.0; // initial configuration is a quadrotor
+//  const double front_moment_arm = quad_tilt_wing_plant->front_joint_x();
+//  const double rear_moment_arm = quad_tilt_wing_plant->rear_joint_x();
+//  const double front_prop_f = UAV_fg/(rear_moment_arm + front_moment_arm) * rear_moment_arm / 2.0;
+//  const double rear_prop_f = UAV_fg/(rear_moment_arm + front_moment_arm) * front_moment_arm / 2.0;
+//  Eigen::Vector4d u0_prop{front_prop_f, front_prop_f,
+//      rear_prop_f, rear_prop_f};
+//  Eigen::VectorXd initial_input = Eigen::VectorXd::Zero(8);
+//  initial_input.topRows(4) = u0_prop;
+//  initial_input.bottomRows(4) = Eigen::VectorXd::Constant(4, initial_tilt_angle);
 
   // read trajectory optimization results
 //  std::fstream infile("/home/klytech/solver_output/traj_opt_sol_100mps_py.txt");
@@ -177,7 +177,7 @@ int DoMain() {
 
   std::cout << "test u: " << u_traj.value(10.3) << std::endl;
   std::cout << "test x: " << x_traj.value(33) << std::endl;
-
+  auto initial_state = x_traj.value(0.0);
   auto controller = builder.AddSystem(TimeVaryingLinearQuadraticRegulator(
           quad_tilt_wing_plant, u_traj, x_traj));
   controller->set_name("controller");
@@ -232,7 +232,7 @@ int DoMain() {
   simulator.StepTo(0.001);
   std::cout << "Pausing for 20 seconds, tune the visualizer please." << std::endl;
 
-  sleep(20);
+  sleep(10);
 
   simulator.StepTo(x_traj.end_time());
   std::cout << "Simulation Done." << std::endl;
