@@ -57,8 +57,8 @@ int DoMain() {
   auto context = quad_tilt_wing_plant.get()->CreateDefaultContext();
 
   const int kNumTimeSamples = 61;
-  const double kMinimumTimeStep = 0.3;
-  const double kMaximumTimeStep = 0.6;
+  const double kMinimumTimeStep = 0.6;
+  const double kMaximumTimeStep = 1.2;
   systems::trajectory_optimization::DirectCollocation dirtran(
       quad_tilt_wing_plant.get(), *context, kNumTimeSamples, kMinimumTimeStep, kMaximumTimeStep);
 
@@ -90,11 +90,11 @@ int DoMain() {
 
   // Add constraint to the states
   // Position constraints
-  const double kStateTol = 1e-6;
-  const double kXLowerLimit = -5.0;
+//  const double kStateTol = 1e-6;
+  const double kXLowerLimit = -1000;
   const double kXUpperLimit = 1000.0;
-  const double kYPosLimit = 500;
-  const double kYNegLimit = -kStateTol;
+  const double kYPosLimit = 200;
+  const double kYNegLimit = -200;
   const double kZLowerLimit = 10-1;
   const double kZUpperLimit = 10+1;
   const double kPhiNegLimit = -M_PI/3;
@@ -102,11 +102,11 @@ int DoMain() {
   const double kThetaNegLimit = -M_PI/3;
   const double kThetaPosLimit = M_PI/3;
   const double kPsiNegLimit = -M_PI;
-  const double kPsiPosLimit = M_PI;
+  const double kPsiPosLimit = 2*M_PI;
   // velocity constraints, very high bound
-  const double kXDotLowerLimit = -60;
-  const double kXDotUpperLimit = 60.0;
-  const double kYDotLimit = 40;
+  const double kXDotLowerLimit = -20;
+  const double kXDotUpperLimit = 20.0;
+  const double kYDotLimit = 10;
   const double kZDotLimit = 0.1;
   const double kPhiDotLimit = M_PI/20;
   const double kThetaDotLimit = M_PI/20;
@@ -143,15 +143,14 @@ int DoMain() {
   // Add initial state constraint
   Eigen::VectorXd initial_state = Eigen::VectorXd::Zero(12);
   initial_state(2) = 10.0; // Z_0, start at height 10m
-  initial_state(6) = 50.0; // start at 100m/s
+  initial_state(6) = 10.0; // start at 100m/s
   dirtran.AddLinearConstraint(dirtran.initial_state() == initial_state);
 
   std::cout << "initial state: " << initial_state << std::endl;
 
   // Add initial input constraint
   Eigen::VectorXd initial_input = Eigen::VectorXd::Zero(8);
-//  initial_input << 1.04137, 1.04137, 0.847701, 0.847701, -0.64799, -0.64799, -0.244268, -0.244268; // for 10m/s
-  initial_input << 0.0755741, 0.0755741, 0.0089271, 0.0089271, -0.0282986, -0.0282986, -0.00999279, -0.00999279;
+  initial_input << 1.04137, 1.04137, 0.847701, 0.847701, -0.64799, -0.64799, -0.244268, -0.244268; // for 10m/s
   Eigen::VectorBlock<const solvers::VectorXDecisionVariable> u_0 = dirtran.input(0);
   dirtran.AddLinearConstraint(u_0 == initial_input);
 
@@ -164,24 +163,51 @@ int DoMain() {
     dirtran.AddLinearConstraint(dirtran.input(i).segment(6,1) - dirtran.input(i-1).segment(6,1) <= kTiltSpeedLimit*dirtran.timestep(i-1));
   }
 
+  // Add mid state constraint
+  const double back_angle = M_PI/4;
+  Eigen::VectorXd mid_state = Eigen::VectorXd::Zero(12);
+  mid_state(0) = 0;
+  mid_state(1) = 0;
+  mid_state(2) = 10; // Z_N, try keeping the same height at mid state
+  mid_state(5) = M_PI+back_angle; // yaw 180 degree to turn back
+  mid_state(6) = -10*cos(back_angle); // dot_X, aim for 10m/s speed
+  mid_state(7) = -10*sin(back_angle);
+  Eigen::VectorBlock<const solvers::VectorXDecisionVariable> x_mid = dirtran.state((kNumTimeSamples-1)/2);
+  dirtran.AddLinearConstraint(x_mid == mid_state);
+
+  std::cout << "mid state: " << mid_state << std::endl;
+
+  // Add mid input constraint
+  Eigen::VectorXd mid_input(8);
+  mid_input << 1.04137, 1.04137, 0.847701, 0.847701, -0.64799, -0.64799, -0.244268, -0.244268;  // for 10m/s
+  const double kSlack_u_N_prop = 1e-4;
+  const double kSlack_u_N_tilt = 1e-4;
+  Eigen::VectorBlock<const solvers::VectorXDecisionVariable> u_mid = dirtran.input((kNumTimeSamples-1)/2);
+  for (int i = 0; i < 4; i++) {
+    dirtran.AddLinearConstraint(u_mid(i) >= mid_input(i) - kSlack_u_N_prop);
+    dirtran.AddLinearConstraint(u_mid(i) <= mid_input(i) + kSlack_u_N_prop);
+  }
+  for (int i = 4; i < 8; i++) {
+    dirtran.AddLinearConstraint(u_mid(i) >= mid_input(i) - kSlack_u_N_tilt);
+    dirtran.AddLinearConstraint(u_mid(i) <= mid_input(i) + kSlack_u_N_tilt);
+  }
+
   // Add final state constraint
   Eigen::VectorXd final_state = Eigen::VectorXd::Zero(12);
-  final_state(0) = 0;  // for initial guess
-  final_state(1) = 250;  // for initial guess
-  final_state(2) = 10; // Z_N, try keeping the same height at final state
-  final_state(5) = M_PI; // yaw 180 degree to turn back
-  final_state(6) = -50.0; // dot_X, aim for 10m/s speed
-  dirtran.AddLinearConstraint(dirtran.final_state().tail(10) == final_state.tail(10));
+  final_state(0) = 0;
+  final_state(1) = 0;
+  final_state(2) = 10; // Z_N, try keeping the same height at mid state
+  final_state(5) = 0;
+  final_state(6) = 10; // dot_X, aim for 10m/s speed
+  final_state(7) = 0;
+  dirtran.AddLinearConstraint(dirtran.final_state() == final_state);
 
   std::cout << "final state: " << final_state << std::endl;
 
   // Add final input constraint
   Eigen::VectorXd final_input(8);
-//  final_input << 1.04137, 1.04137, 0.847701, 0.847701, -0.64799, -0.64799, -0.244268, -0.244268;  // for 10m/s
-  final_input << 0.0755741, 0.0755741, 0.0089271, 0.0089271, -0.0282986, -0.0282986, -0.00999279, -0.00999279;
-  const double kSlack_u_N_prop = 1e-4;
-  const double kSlack_u_N_tilt = 1e-4;
-  Eigen::VectorBlock<const solvers::VectorXDecisionVariable> u_N = dirtran.input(kNumTimeSamples-1);
+  final_input << 1.04137, 1.04137, 0.847701, 0.847701, -0.64799, -0.64799, -0.244268, -0.244268;  // for 10m/s
+  Eigen::VectorBlock<const solvers::VectorXDecisionVariable> u_N = dirtran.input((kNumTimeSamples-1));
   for (int i = 0; i < 4; i++) {
     dirtran.AddLinearConstraint(u_N(i) >= final_input(i) - kSlack_u_N_prop);
     dirtran.AddLinearConstraint(u_N(i) <= final_input(i) + kSlack_u_N_prop);
@@ -191,64 +217,13 @@ int DoMain() {
     dirtran.AddLinearConstraint(u_N(i) <= final_input(i) + kSlack_u_N_tilt);
   }
 
-//  // Add mid point constraint
-//  // Roll and start to turn
-//  Eigen::Matrix<int, 1, 3> mid_point_times{(kNumTimeSamples-1)/4, (kNumTimeSamples-1)/4 *2 , (kNumTimeSamples-1)/4 *3};
-//  std::cout << "Mid point times: " << mid_point_times << std::endl;
-//  Eigen::VectorXd mid_state_1 = Eigen::VectorXd::Zero(12);
-//  mid_state_1(0) = 200; // X for initial guess
-//  mid_state_1(2) = 10; // Z
-//  const double kRollTurnMax = -M_PI/18.0;
-//  const double kRollTurnMin = -M_PI/2.0;
-//  mid_state_1(3) = (kRollTurnMax + kRollTurnMin)/2.0;
-//  mid_state_1(6) = 100; // X_dot for initial guess
-//  Eigen::VectorBlock<const solvers::VectorXDecisionVariable> x_mid_point_1 = dirtran.state(mid_point_times(0));
-//  dirtran.AddLinearConstraint(x_mid_point_1.segment(1,2) == mid_state_1.segment(1,2));
-//  dirtran.AddLinearConstraint(x_mid_point_1(3) >= kRollTurnMin);
-//  dirtran.AddLinearConstraint(x_mid_point_1(3) <= kRollTurnMax);
-//  dirtran.AddLinearConstraint(x_mid_point_1.segment(4,2) == mid_state_1.segment(4,2));
-//  dirtran.AddLinearConstraint(x_mid_point_1.segment(7,5) == mid_state_1.segment(7,5));
-//  // Turning point
-//  Eigen::VectorXd mid_state_2 = Eigen::VectorXd::Zero(12);
-//  mid_state_2(0) = 250; //X for initial guess
-//  mid_state_2(1) = 50; // Y for initial guess
-//  mid_state_2(2) = 10; // Z
-//  mid_state_2(3) = (kRollTurnMax + kRollTurnMin)/2.0;
-//  mid_state_2(5) = M_PI/2;
-//  mid_state_2(6) = 0; // X dot
-//  const double kTurnSpeedMin = 20.0;
-//  const double kTurnSpeedMax = 100.0;
-//  mid_state_2(7) = (kTurnSpeedMax + kTurnSpeedMin) / 2.0; // Y dot for initial guess
-//  Eigen::VectorBlock<const solvers::VectorXDecisionVariable> x_mid_point_2 = dirtran.state(mid_point_times(1));
-//  dirtran.AddLinearConstraint(x_mid_point_2.segment(2,1) == mid_state_2.segment(2,1));
-//  dirtran.AddLinearConstraint(x_mid_point_2(3) >= kRollTurnMin);
-//  dirtran.AddLinearConstraint(x_mid_point_2(3) <= kRollTurnMax);
-//  dirtran.AddLinearConstraint(x_mid_point_2.segment(4,2) == mid_state_2.segment(4,2));
-//  dirtran.AddLinearConstraint(x_mid_point_2(6) == mid_state_2(6));
-//  dirtran.AddLinearConstraint(x_mid_point_2(7) >= kTurnSpeedMin);
-//  dirtran.AddLinearConstraint(x_mid_point_2(7) <= kTurnSpeedMax);
-//  dirtran.AddLinearConstraint(x_mid_point_2.segment(8,4) == mid_state_2.segment(8,4));
-//  // Finish turning
-//  Eigen::VectorXd mid_state_3 = Eigen::VectorXd::Zero(12);
-//  mid_state_3(0) = 200; // X for initial guess
-//  mid_state_3(1) = 100; // Y for initial guess
-//  mid_state_3(2) = 10; // Z
-//  mid_state_3(3) = (kRollTurnMax + kRollTurnMin)/2.0;;
-//  mid_state_3(5) = M_PI;
-//  mid_state_3(6) = -100; // X dot for initial guess
-//  Eigen::VectorBlock<const solvers::VectorXDecisionVariable> x_mid_point_3 = dirtran.state(mid_point_times(2));
-//  dirtran.AddLinearConstraint(x_mid_point_3.segment(2,1) == mid_state_3.segment(2,1));
-//  dirtran.AddLinearConstraint(x_mid_point_3(3) >= kRollTurnMin);
-//  dirtran.AddLinearConstraint(x_mid_point_3(3) <= kRollTurnMax);
-//  dirtran.AddLinearConstraint(x_mid_point_3.segment(4,2) == mid_state_3.segment(4,2));
-//  dirtran.AddLinearConstraint(x_mid_point_3.segment(7,5) == mid_state_3.segment(7,5));
 
   // Add running cost
-  const double R_prop = 0.0;  // Cost on input "effort".
+  const double R_prop = 0.1;  // Cost on input "effort".
   for (int i = 0; i < 4; i++) {
       dirtran.AddRunningCost(R_prop * u(i) * u(i));
   }
-  const double R_tilt = 0;  // Cost on input "effort".
+  const double R_tilt = 1;  // Cost on input "effort".
   for (int i = 4; i < 8; i++) {
       dirtran.AddRunningCost(R_tilt * u(i) * u(i));
   }
@@ -258,23 +233,24 @@ int DoMain() {
   // set initial guess
   const double timespan_init = (kNumTimeSamples - 1) * (kMinimumTimeStep + kMaximumTimeStep) / 2.0;
   auto traj_init_x = PiecewisePolynomial<double>::FirstOrderHold(
-      {0, timespan_init},
-              {initial_state, final_state});
+      {0, timespan_init/2, timespan_init},
+              {initial_state, mid_state, final_state});
   auto initial_input_guess = initial_input;
   auto final_input_guess = final_input;
   auto traj_init_u = PiecewisePolynomial<double>::FirstOrderHold(
-      {0, timespan_init}, {initial_input_guess, final_input_guess});
+      {0, timespan_init/2, timespan_init},
+              {initial_input_guess, mid_input, final_input_guess});
   dirtran.SetInitialTrajectory(traj_init_u, traj_init_x);
 
   // Set solver options
 //  const double tol = 1e-4;
   solvers::SnoptSolver solver;
   dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Major print level", 2);
-  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Iteration limit", 128000);
+  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Iteration limit", 256000);
 //  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Iterations limit", 1e4);
 //  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Major iterations limit", 1e3);
 //  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Minor iterations limit", 1e3);
-  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Print file", "/home/klytech/solver_output/traj_opt_50mps_snopt_turn.txt");
+  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Print file", "/home/klytech/solver_output/traj_opt_snopt_infinity_10mps.txt");
 //  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Print file", "/Users/Hank/solver_output/traj_opt_10mps_snopt_turn.txt");
 
   SolutionResult result = solver.Solve(dirtran);
@@ -296,7 +272,7 @@ int DoMain() {
   std::cout << "u_samples: " << u_samples << std::endl;
   std::cout << "x_samples: " << x_samples << std::endl;
 
-  std::ofstream file("/home/klytech/solver_output/traj_opt_sol_50mps_snopt_turn_py.txt");
+  std::ofstream file("/home/klytech/solver_output/traj_opt_sol_snopt_infinity_10mps_py.txt");
 //  std::ofstream file("/Users/Hank/solver_output/traj_opt_sol_10mps_snopt_turn_py.txt");
   if (file.is_open()) {
     file << "t samples: " << '\n';
@@ -349,10 +325,11 @@ int DoMain() {
 
   simulator.set_target_realtime_rate(FLAGS_target_realtime_rate);
   simulator.Initialize();
-  simulator.StepTo(0.01);
+  sleep(15);
+//  simulator.StepTo(0.01);
   std::cout << "Pausing for 30 seconds, tune the visualizer please." << std::endl;
 
-  sleep(15);
+//  sleep(15);
 
   simulator.StepTo(pp_xtraj.end_time());
   std::cout << "Simulation Done." << std::endl;

@@ -93,7 +93,7 @@ int DoMain() {
   const double kStateTol = 1e-6;
   const double kXLowerLimit = -5.0;
   const double kXUpperLimit = 1000.0;
-  const double kYPosLimit = 500;
+  const double kYPosLimit = 200;
   const double kYNegLimit = -kStateTol;
   const double kZLowerLimit = 10-1;
   const double kZUpperLimit = 10+1;
@@ -102,11 +102,11 @@ int DoMain() {
   const double kThetaNegLimit = -M_PI/3;
   const double kThetaPosLimit = M_PI/3;
   const double kPsiNegLimit = -M_PI;
-  const double kPsiPosLimit = M_PI;
+  const double kPsiPosLimit = 2*M_PI;
   // velocity constraints, very high bound
-  const double kXDotLowerLimit = -60;
-  const double kXDotUpperLimit = 60.0;
-  const double kYDotLimit = 40;
+  const double kXDotLowerLimit = -20;
+  const double kXDotUpperLimit = 20.0;
+  const double kYDotLimit = 10;
   const double kZDotLimit = 0.1;
   const double kPhiDotLimit = M_PI/20;
   const double kThetaDotLimit = M_PI/20;
@@ -143,15 +143,14 @@ int DoMain() {
   // Add initial state constraint
   Eigen::VectorXd initial_state = Eigen::VectorXd::Zero(12);
   initial_state(2) = 10.0; // Z_0, start at height 10m
-  initial_state(6) = 50.0; // start at 100m/s
+  initial_state(6) = 10.0; // start at 100m/s
   dirtran.AddLinearConstraint(dirtran.initial_state() == initial_state);
 
   std::cout << "initial state: " << initial_state << std::endl;
 
   // Add initial input constraint
   Eigen::VectorXd initial_input = Eigen::VectorXd::Zero(8);
-//  initial_input << 1.04137, 1.04137, 0.847701, 0.847701, -0.64799, -0.64799, -0.244268, -0.244268; // for 10m/s
-  initial_input << 0.0755741, 0.0755741, 0.0089271, 0.0089271, -0.0282986, -0.0282986, -0.00999279, -0.00999279;
+  initial_input << 1.04137, 1.04137, 0.847701, 0.847701, -0.64799, -0.64799, -0.244268, -0.244268; // for 10m/s
   Eigen::VectorBlock<const solvers::VectorXDecisionVariable> u_0 = dirtran.input(0);
   dirtran.AddLinearConstraint(u_0 == initial_input);
 
@@ -165,20 +164,21 @@ int DoMain() {
   }
 
   // Add final state constraint
+  const double back_angle = M_PI/4;
   Eigen::VectorXd final_state = Eigen::VectorXd::Zero(12);
   final_state(0) = 0;  // for initial guess
-  final_state(1) = 250;  // for initial guess
+  final_state(1) = 0;  // for initial guess
   final_state(2) = 10; // Z_N, try keeping the same height at final state
-  final_state(5) = M_PI; // yaw 180 degree to turn back
-  final_state(6) = -50.0; // dot_X, aim for 10m/s speed
-  dirtran.AddLinearConstraint(dirtran.final_state().tail(10) == final_state.tail(10));
+  final_state(5) = M_PI+back_angle; // yaw 180 degree to turn back
+  final_state(6) = -10*cos(back_angle); // dot_X, aim for 10m/s speed
+  final_state(7) = -10*sin(back_angle);
+  dirtran.AddLinearConstraint(dirtran.final_state() == final_state);
 
   std::cout << "final state: " << final_state << std::endl;
 
   // Add final input constraint
   Eigen::VectorXd final_input(8);
-//  final_input << 1.04137, 1.04137, 0.847701, 0.847701, -0.64799, -0.64799, -0.244268, -0.244268;  // for 10m/s
-  final_input << 0.0755741, 0.0755741, 0.0089271, 0.0089271, -0.0282986, -0.0282986, -0.00999279, -0.00999279;
+  final_input << 1.04137, 1.04137, 0.847701, 0.847701, -0.64799, -0.64799, -0.244268, -0.244268;  // for 10m/s
   const double kSlack_u_N_prop = 1e-4;
   const double kSlack_u_N_tilt = 1e-4;
   Eigen::VectorBlock<const solvers::VectorXDecisionVariable> u_N = dirtran.input(kNumTimeSamples-1);
@@ -244,11 +244,11 @@ int DoMain() {
 //  dirtran.AddLinearConstraint(x_mid_point_3.segment(7,5) == mid_state_3.segment(7,5));
 
   // Add running cost
-  const double R_prop = 0.0;  // Cost on input "effort".
+  const double R_prop = 0.1;  // Cost on input "effort".
   for (int i = 0; i < 4; i++) {
       dirtran.AddRunningCost(R_prop * u(i) * u(i));
   }
-  const double R_tilt = 0;  // Cost on input "effort".
+  const double R_tilt = 1;  // Cost on input "effort".
   for (int i = 4; i < 8; i++) {
       dirtran.AddRunningCost(R_tilt * u(i) * u(i));
   }
@@ -270,11 +270,11 @@ int DoMain() {
 //  const double tol = 1e-4;
   solvers::SnoptSolver solver;
   dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Major print level", 2);
-  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Iteration limit", 128000);
+  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Iteration limit", 256000);
 //  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Iterations limit", 1e4);
 //  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Major iterations limit", 1e3);
 //  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Minor iterations limit", 1e3);
-  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Print file", "/home/klytech/solver_output/traj_opt_50mps_snopt_turn.txt");
+  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Print file", "/home/klytech/solver_output/traj_opt_snopt_circle_10mps.txt");
 //  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Print file", "/Users/Hank/solver_output/traj_opt_10mps_snopt_turn.txt");
 
   SolutionResult result = solver.Solve(dirtran);
@@ -296,7 +296,7 @@ int DoMain() {
   std::cout << "u_samples: " << u_samples << std::endl;
   std::cout << "x_samples: " << x_samples << std::endl;
 
-  std::ofstream file("/home/klytech/solver_output/traj_opt_sol_50mps_snopt_turn_py.txt");
+  std::ofstream file("/home/klytech/solver_output/traj_opt_sol_snopt_circle_10mps_py.txt");
 //  std::ofstream file("/Users/Hank/solver_output/traj_opt_sol_10mps_snopt_turn_py.txt");
   if (file.is_open()) {
     file << "t samples: " << '\n';
@@ -349,10 +349,11 @@ int DoMain() {
 
   simulator.set_target_realtime_rate(FLAGS_target_realtime_rate);
   simulator.Initialize();
-  simulator.StepTo(0.01);
+  sleep(15);
+//  simulator.StepTo(0.01);
   std::cout << "Pausing for 30 seconds, tune the visualizer please." << std::endl;
 
-  sleep(15);
+//  sleep(15);
 
   simulator.StepTo(pp_xtraj.end_time());
   std::cout << "Simulation Done." << std::endl;

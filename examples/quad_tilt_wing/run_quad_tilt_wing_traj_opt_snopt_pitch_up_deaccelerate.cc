@@ -120,7 +120,7 @@ int DoMain() {
   dirtran.AddConstraintToAllKnotPoints(x(3) >= -kPhiLimit); // limit phi
   dirtran.AddConstraintToAllKnotPoints(x(3) <= kPhiLimit);
   dirtran.AddConstraintToAllKnotPoints(x(4) >= -kThetaLimit); // limit theta
-  dirtran.AddConstraintToAllKnotPoints(x(4) <= 0);
+  dirtran.AddConstraintToAllKnotPoints(x(4) <= kThetaLimit);
   dirtran.AddConstraintToAllKnotPoints(x(5) >= -kPsiLimit); // limit psi
   dirtran.AddConstraintToAllKnotPoints(x(5) <= kPsiLimit);
   dirtran.AddConstraintToAllKnotPoints(x(6) >= kXDotLowerLimit); // limit xdot
@@ -236,12 +236,12 @@ int DoMain() {
   // Set solver options
 //  const double tol = 1e-4;
   solvers::SnoptSolver solver;
-//  dirtran.SetSolverOption(solvers::SnoptSolver::id(),
-//                          "Print file", "/home/klytech/solver_output/traj_opt_100mps_snopt.txt");
+  dirtran.SetSolverOption(solvers::SnoptSolver::id(),
+                          "Print file", "/home/klytech/solver_output/pitch_up_deaccelerate.txt");
   dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Scale option", 0);
   dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Iteration limit", 100000);
-  dirtran.SetSolverOption(solvers::SnoptSolver::id(),
-                          "Print file", "/Users/Hank/solver_output/pitch_up_deaccelerate.txt");
+//  dirtran.SetSolverOption(solvers::SnoptSolver::id(),
+//                          "Print file", "/Users/Hank/solver_output/pitch_up_deaccelerate.txt");
 
   SolutionResult result = solver.Solve(dirtran);
 
@@ -262,8 +262,8 @@ int DoMain() {
   std::cout << "u_samples: " << u_samples << std::endl;
   std::cout << "x_samples: " << x_samples << std::endl;
 
-//  std::ofstream file("/home/klytech/solver_output/traj_opt_sol_100mps_snopt_py.txt");
-  std::ofstream file("/Users/Hank/solver_output/pitch_up_deaccelerate_py.txt");
+  std::ofstream file("/home/klytech/solver_output/pitch_up_deaccelerate_py.txt");
+//  std::ofstream file("/Users/Hank/solver_output/pitch_up_deaccelerate_py.txt");
 
   if (file.is_open()) {
     file << "t samples: " << '\n';
