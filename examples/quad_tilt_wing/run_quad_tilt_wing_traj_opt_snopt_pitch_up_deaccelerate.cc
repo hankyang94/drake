@@ -218,8 +218,8 @@ int DoMain() {
   for (int i = 4; i < 8; i++) {
       dirtran.AddRunningCost(R_tilt * u(i) * u(i));
   }
-  const double R_pitch = -1.0;
-  dirtran.AddRunningCost(R_pitch * x(4) * x(4));
+//  const double R_pitch = -1.0;
+//  dirtran.AddRunningCost(R_pitch * x(4) * x(4));
 
   std::cout << "Finished adding all constraints and costs." << std::endl;
 
@@ -239,7 +239,7 @@ int DoMain() {
 //  dirtran.SetSolverOption(solvers::SnoptSolver::id(),
 //                          "Print file", "/home/klytech/solver_output/traj_opt_100mps_snopt.txt");
   dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Scale option", 0);
-  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Iteration limit", 128000);
+  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Iteration limit", 100000);
   dirtran.SetSolverOption(solvers::SnoptSolver::id(),
                           "Print file", "/Users/Hank/solver_output/pitch_up_deaccelerate.txt");
 
