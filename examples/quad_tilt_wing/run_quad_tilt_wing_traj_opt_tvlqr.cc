@@ -28,6 +28,7 @@
 #include "drake/examples/quad_tilt_wing/quad_tilt_wing_plant.h"
 #include "drake/solvers/ipopt_solver.h"
 #include "drake/common/trajectories/piecewise_polynomial.h"
+#include "drake/systems/primitives/signal_logger.h"
 
 using drake::solvers::SolutionResult;
 
@@ -40,7 +41,7 @@ using namespace Eigen;
 
 namespace {
 
-DEFINE_double(target_realtime_rate, 0.5,
+DEFINE_double(target_realtime_rate, 1.0,
               "Playback speed.  See documentation for "
               "Simulator::set_target_realtime_rate() for details.");
 
@@ -67,21 +68,21 @@ int DoMain() {
   std::cout << "initial state: " << initial_state << std::endl;
 
   // Add initial input constraint
-  const double kProp = quad_tilt_wing_plant->kProp();
   const double UAV_fg = quad_tilt_wing_plant->m() * quad_tilt_wing_plant->g();
   const double initial_tilt_angle = -M_PI/2.0; // initial configuration is a quadrotor
   const double front_moment_arm = quad_tilt_wing_plant->front_joint_x();
   const double rear_moment_arm = quad_tilt_wing_plant->rear_joint_x();
   const double front_prop_f = UAV_fg/(rear_moment_arm + front_moment_arm) * rear_moment_arm / 2.0;
   const double rear_prop_f = UAV_fg/(rear_moment_arm + front_moment_arm) * front_moment_arm / 2.0;
-  Eigen::Vector4d u0_prop{front_prop_f/kProp, front_prop_f/kProp,
-      rear_prop_f/kProp, rear_prop_f/kProp};
+  Eigen::Vector4d u0_prop{front_prop_f, front_prop_f,
+      rear_prop_f, rear_prop_f};
   Eigen::VectorXd initial_input = Eigen::VectorXd::Zero(8);
   initial_input.topRows(4) = u0_prop;
   initial_input.bottomRows(4) = Eigen::VectorXd::Constant(4, initial_tilt_angle);
 
   // read trajectory optimization results
-  std::fstream infile("/home/klytech/solver_output/traj_opt_sol_100mps_py.txt");
+//  std::fstream infile("/home/klytech/solver_output/traj_opt_sol_100mps_py.txt");
+  std::fstream infile("/Users/Hank/solver_output/transform_sol_100mps_0mps_snopt_new_py.txt");
   std::string line;
   int count = 0;
   int tLine = 0;
@@ -100,7 +101,8 @@ int DoMain() {
   infile.close();
 
   Eigen::VectorXd t_samples(uLine-1);
-  std::fstream infile_t("/home/klytech/solver_output/traj_opt_sol_100mps_py.txt");
+//  std::fstream infile_t("/home/klytech/solver_output/traj_opt_sol_100mps_py.txt");
+  std::fstream infile_t("/Users/Hank/solver_output/transform_sol_100mps_0mps_snopt_new_py.txt");
   std::string line_t;
   int lineCount_t = 0;
   int tCount = 0;
@@ -118,7 +120,8 @@ int DoMain() {
   infile_t.close();
 
   Eigen::MatrixXd u_samples(8, uLine-1);
-  std::fstream infile_u("/home/klytech/solver_output/traj_opt_sol_100mps_py.txt");
+//  std::fstream infile_u("/home/klytech/solver_output/traj_opt_sol_100mps_py.txt");
+  std::fstream infile_u("/Users/Hank/solver_output/transform_sol_100mps_0mps_snopt_new_py.txt");
   std::string line_u;
   int lineCount_u = 0;
   int uCount = 0;
@@ -140,7 +143,8 @@ int DoMain() {
   infile_u.close();
 
   Eigen::MatrixXd x_samples(12, uLine-1);
-  std::fstream infile_x("/home/klytech/solver_output/traj_opt_sol_100mps_py.txt");
+//  std::fstream infile_x("/home/klytech/solver_output/traj_opt_sol_100mps_py.txt");
+  std::fstream infile_x("/Users/Hank/solver_output/transform_sol_100mps_0mps_snopt_new_py.txt");
   std::string line_x;
   int lineCount_x = 0;
   int xCount = 0;
@@ -202,6 +206,14 @@ int DoMain() {
   builder.Connect(controller_demux->get_output_port(1), mux->get_input_port(3));
   // Connect result to publisher
   builder.Connect(mux->get_output_port(0), publisher->get_input_port(0));
+  // Add state and control log
+  auto state_log =
+          builder.AddSystem<drake::systems::SignalLogger<double>>(12);
+  auto control_log =
+          builder.AddSystem<drake::systems::SignalLogger<double>>(8);
+
+  builder.Connect(quad_tilt_wing_plant->get_output_port(0), state_log->get_input_port());
+  builder.Connect(controller->get_output_port(), control_log->get_input_port());
 
   auto diagram = builder.Build();
 
@@ -224,6 +236,21 @@ int DoMain() {
 
   simulator.StepTo(x_traj.end_time());
   std::cout << "Simulation Done." << std::endl;
+
+  std::ofstream state_file("/Users/Hank/solver_output/TVLQR_log_state_100mps_0mps.txt");
+  std::ofstream control_file("/Users/Hank/solver_output/TVLQR_log_control_100mps_0mps.txt");
+  std::ofstream time_file("/Users/Hank/solver_output/TVLQR_log_time_100mps_0mps.txt");
+
+  if (state_file.is_open()) {
+    state_file << state_log->data() << '\n';
+  }
+  if (control_file.is_open()) {
+    control_file << control_log->data() << '\n';
+  }
+  if (time_file.is_open()) {
+    time_file << state_log->sample_times() << '\n';
+  }
+
   return 0;
 }
 

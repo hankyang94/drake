@@ -24,7 +24,7 @@ class QuadTiltWingPlant final : public systems::LeafSystem<T> {                /
   QuadTiltWingPlant(double m_arg, double rear_joint_x_arg,
                     double front_joint_x_arg, double rear_wing_len_arg, double rear_wing_wid_arg,
                     double front_wing_len_arg, double front_wing_wid_arg, double front_prop_y_arg,
-                    double rear_prop_y_arg, double kProp_arg, double kLambda_arg,
+                    double rear_prop_y_arg, double kLambda_arg,
                     const Eigen::Matrix3d& I_arg);
 
   /// Scalar-converting copy constructor.  See @ref system_scalar_conversion.
@@ -43,7 +43,6 @@ class QuadTiltWingPlant final : public systems::LeafSystem<T> {                /
 
   double m() const { return m_; }
   double g() const { return g_; }
-  double kProp() const { return kProp_; }
   double rear_joint_x() const { return rear_joint_x_; }
   double front_joint_x() const {return front_joint_x_; }
 
@@ -89,7 +88,6 @@ class QuadTiltWingPlant final : public systems::LeafSystem<T> {                /
   //~ const double L_;           // Length of the arms (m).
   //~ const double kF_;          // Force input constant.
   //~ const double kM_;          // Moment input constant.
-  const double kProp_;         // thrust = kProp_*omega^2
   const double kLambda_;       // Torque-to-thrust ratio
   const Eigen::Matrix3d I_;  // Moment of Inertia about the Center of Mass
 };

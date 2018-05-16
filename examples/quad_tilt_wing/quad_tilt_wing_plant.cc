@@ -6,7 +6,7 @@
 
 #include "drake/common/default_scalars.h"
 #include "drake/math/gradient.h"
-#include "drake/math/roll_pitch_yaw.h"
+#include "drake/math/rotation_matrix.h"
 #include "drake/systems/controllers/linear_quadratic_regulator.h"
 #include "drake/util/drakeGeometryUtil.h"
 #include "drake/systems/primitives/linear_system.h"
@@ -22,9 +22,9 @@ namespace quad_tilt_wing {
 namespace {
 Matrix3d default_moment_of_inertia() {
   return (Eigen::Matrix3d() <<  // BR
-          0.03504, 0, 0,  // BR
-          0, 0.02011, 0,  // BR
-          0, 0, 0.05504).finished();
+          0.3504, 0, 0,  // BR 0.03504
+          0, 0.2, 0,  // BR 0.02011
+          0, 0, 0.5504).finished(); // 0.05504
 }
 }  // namespace
 
@@ -39,7 +39,6 @@ QuadTiltWingPlant<T>::QuadTiltWingPlant()
                      0.1,    // front_wing_wid (m)
                      0.156,  // front_prop_y (m)
                      0.245,  // rear_prop_y (m)
-                     5e-6,    // kProp
                      0.1,  // kLambda
                      default_moment_of_inertia()
                      ) {}
@@ -49,14 +48,14 @@ QuadTiltWingPlant<T>::QuadTiltWingPlant(double m_arg, double rear_joint_x_arg,
                                   double front_joint_x_arg, double rear_wing_len_arg,
                                   double rear_wing_wid_arg, double front_wing_len_arg,
                                   double front_wing_wid_arg, double front_prop_y_arg,
-                                  double rear_prop_y_arg, double kProp_arg, double kLambda_arg,
+                                  double rear_prop_y_arg, double kLambda_arg,
                                   const Matrix3d& I_arg)
     : systems::LeafSystem<T>(
           systems::SystemTypeTag<quad_tilt_wing::QuadTiltWingPlant>{}),
       rho_{1.225}, g_{9.81}, J_prop_{5e-5}, m_(m_arg), rear_joint_x_(rear_joint_x_arg), front_joint_x_(front_joint_x_arg),
       rear_wing_len_(rear_wing_len_arg), rear_wing_wid_(rear_wing_wid_arg), front_wing_len_(front_wing_len_arg),
       front_wing_wid_(front_wing_wid_arg), front_prop_y_(front_prop_y_arg), rear_prop_y_(rear_prop_y_arg),
-      kProp_(kProp_arg), kLambda_(kLambda_arg), I_(I_arg) {
+      kLambda_(kLambda_arg), I_(I_arg) {
   this->DeclareInputPort(systems::kVectorValued, kInputDimension);
   this->DeclareContinuousState(kStateDimension);
   this->DeclareVectorOutputPort(systems::BasicVector<T>(kStateDimension),
@@ -70,7 +69,7 @@ QuadTiltWingPlant<T>:: QuadTiltWingPlant(const QuadTiltWingPlant<U>& other)
                            other.rear_wing_len_, other.rear_wing_wid_,
                            other.front_wing_len_, other.front_wing_wid_,
                            other.front_prop_y_, other.rear_prop_y_,
-                           other.kProp_, other.kLambda_, other.I_) {}  // this is just a copy constructor
+                           other.kLambda_, other.I_) {}  // this is just a copy constructor
 
 template <typename T>
 QuadTiltWingPlant<T>::~QuadTiltWingPlant() {}
@@ -105,16 +104,17 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
   // Extract orientation, angular velocities and linear velocities.
   Vector3<T> rpy = state.segment(3, 3);
   Vector3<T> rpy_dot = state.segment(9, 3);
-  Vector3<T> xyz_dot = state.segment(6, 3);
-  VectorX<T> prop_speed2 = u.segment(0,4);  // omega_1^2, omega_2^2, omega_3^2, omega_4^2
+  Vector3<T> XYZ_dot = state.segment(6, 3);
+  VectorX<T> prop_speed2 = u.segment(0,4);  // F_1, F_2, F_3, F_4
   VectorX<T> tilt_angle = u.segment(4,4);   // theta_1, theta_2, theta_3, theta_4
 
   // Convert orientation to a rotation matrix.
   Matrix3<T> R = drake::math::rpy2rotmat(rpy);
-
+  auto xyz_dot = R.adjoint() * XYZ_dot; // world frame to body frame
+//  auto xyz_dot = XYZ_dot;
   /////////// Compute forces /////////////////////
   // Compute the propeller net forces.
-  VectorX<T> uF = kProp_ * prop_speed2;
+  VectorX<T> uF = prop_speed2;
   // Compute force rotational matrix due to wing tilting
   Eigen::Matrix<T, 3, 4> thrust_rot;
   thrust_rot << cos(tilt_angle(0)), cos(tilt_angle(1)), cos(tilt_angle(2)), cos(tilt_angle(3)),
@@ -210,11 +210,11 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
   //~ Vector3<T> gyro_3(cos(tilt_angle(2)), 0, -sin(tilt_angle(2)));
   //~ Vector3<T> gyro_4(cos(tilt_angle(3)), 0, -sin(tilt_angle(3)));
   //~ VectorX<T> prop_speed = prop_speed2.cwiseSqrt();
-  Matrix3<T> E;
-  E << 1, 0, -sin(rpy(1)),
-       0, cos(rpy(0)), sin(rpy(0))*cos(rpy(1)),
-       0, -sin(rpy(0)), cos(rpy(0))*cos(rpy(1));
-  Vector3<T> pqr = E*rpy_dot;
+//  Matrix3<T> E;
+//  E << 1, 0, -sin(rpy(1)),
+//       0, cos(rpy(0)), sin(rpy(0))*cos(rpy(1)),
+//       0, -sin(rpy(0)), cos(rpy(0))*cos(rpy(1));
+//  Vector3<T> pqr = E*rpy_dot;
   //~ Vector3<T> M_gyro(0,0,0);
   //~ Vector3<T> gyro(0,0,0);
   //~ double eta;
@@ -226,9 +226,9 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
       //~ }
   Vector3<T> M_t = M_th + M_w;
 
-  //~ Vector3<T> pqr;
-  //~ rpydot2angularvel(rpy, rpy_dot, pqr);
-  //~ pqr = R.adjoint() * pqr;
+  Vector3<T> pqr;
+  rpydot2angularvel(rpy, rpy_dot, pqr);
+  pqr = R.adjoint() * pqr;
 
   // Computing the resultant angular acceleration due to the moments.
   Vector3<T> pqr_dot = I_.ldlt().solve(M_t - pqr.cross(I_ * pqr)); // this is equal to saying I_*pqr_dot = M - pqr.cross(I_ * pqr)
@@ -251,9 +251,9 @@ void QuadTiltWingPlant<T>::DoCalcTimeDerivatives(
   VectorX<T> xdot(12);
   xdot << state.tail(6), xyz_ddot, rpy_ddot;
 
-  //~ std::cout << "inside plant, u is:" << u << std::endl;
-  //~ std::cout << "inside plant, x is:" << state << std::endl;
-  //~ std::cout << "inside plant, xdot is:" << xdot << std::endl;
+//  std::cout << "inside plant, u is:" << u << std::endl;
+//  std::cout << "inside plant, x is:" << state << std::endl;
+//  std::cout << "inside plant, xdot is:" << xdot << std::endl;
 
   derivatives->SetFromVector(xdot);
 }
@@ -286,9 +286,9 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRController(
   std::cout << front_prop_f << std::endl;
   double rear_prop_f = UAV_fg/(rear_moment_arm + front_moment_arm) * front_moment_arm / 2;
   std::cout << rear_prop_f << std::endl;
-  Eigen::Vector4d u0_prop{front_prop_f/quad_tilt_wing_plant->kProp(), front_prop_f/quad_tilt_wing_plant->kProp(),
-      rear_prop_f/quad_tilt_wing_plant->kProp(), rear_prop_f/quad_tilt_wing_plant->kProp()};
-  Eigen::VectorXd u0_tilt = Eigen::VectorXd::Constant(4, -M_PI/2);
+  Eigen::Vector4d u0_prop{front_prop_f, front_prop_f,
+      rear_prop_f, rear_prop_f};
+  Eigen::VectorXd u0_tilt = Eigen::VectorXd::Constant(4, -M_PI/2.0);
 
   std::cout << u0_prop << std::endl;
   std::cout << u0_tilt << std::endl;
@@ -307,7 +307,7 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRController(
   Q.topLeftCorner<6, 6>() = 10 * Eigen::MatrixXd::Identity(6, 6);
 
   Eigen::MatrixXd R = Eigen::MatrixXd::Identity(8, 8);
-  R.topLeftCorner<4, 4>() = 1e-8 * Eigen::MatrixXd::Identity(4, 4);
+  R.topLeftCorner<4, 4>() = 10 * Eigen::MatrixXd::Identity(4, 4);
   R.bottomRightCorner<4, 4>() = 1e2 * Eigen::MatrixXd::Identity(4, 4);
 
   std::cout << "GOT Q and R." << std::endl;
@@ -344,8 +344,8 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerUpright(
   std::cout << front_prop_f << std::endl;
   double rear_prop_f = UAV_fg/(rear_moment_arm + front_moment_arm) * front_moment_arm / 2;
   std::cout << rear_prop_f << std::endl;
-  Eigen::Vector4d u0_prop{front_prop_f/quad_tilt_wing_plant->kProp(), front_prop_f/quad_tilt_wing_plant->kProp(),
-      rear_prop_f/quad_tilt_wing_plant->kProp(), rear_prop_f/quad_tilt_wing_plant->kProp()};
+  Eigen::Vector4d u0_prop{front_prop_f, front_prop_f,
+      rear_prop_f, rear_prop_f};
   Eigen::VectorXd u0_tilt = Eigen::VectorXd::Constant(4, -(M_PI/2 + pitch_angle));
 
   std::cout << u0_prop << std::endl;
@@ -364,7 +364,7 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerUpright(
   Q.topLeftCorner<6, 6>() = 10 * Eigen::MatrixXd::Identity(6, 6);
 
   Eigen::MatrixXd R = Eigen::MatrixXd::Identity(8, 8);
-  R.topLeftCorner<4, 4>() = 1e-8 * Eigen::MatrixXd::Identity(4, 4);
+  R.topLeftCorner<4, 4>() = 10 * Eigen::MatrixXd::Identity(4, 4);
   R.bottomRightCorner<4, 4>() = 1e2 * Eigen::MatrixXd::Identity(4, 4);
 
   std::cout << "GOT Q and R." << std::endl;
@@ -395,8 +395,8 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerWingtilt(
   double front_prop_f = UAV_fg * c_r / (-sin(front_wing_tilt)) / 2;
   double rear_prop_f = UAV_fg * c_f / (-sin(rear_wing_tilt)) / 2;
 
-  Eigen::Vector4d u0_prop{front_prop_f/quad_tilt_wing_plant->kProp(), front_prop_f/quad_tilt_wing_plant->kProp(),
-      rear_prop_f/quad_tilt_wing_plant->kProp(), rear_prop_f/quad_tilt_wing_plant->kProp()};
+  Eigen::Vector4d u0_prop{front_prop_f, front_prop_f,
+      rear_prop_f, rear_prop_f};
   Eigen::Vector4d u0_tilt{front_wing_tilt, front_wing_tilt, rear_wing_tilt, rear_wing_tilt};
 
   std::cout << u0_prop << std::endl;
@@ -415,8 +415,8 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerWingtilt(
   Q.topLeftCorner<6, 6>() = 10 * Eigen::MatrixXd::Identity(6, 6);
 
   Eigen::MatrixXd R = Eigen::MatrixXd::Identity(8, 8);
-  R.topLeftCorner<4, 4>() = 1e-8 * Eigen::MatrixXd::Identity(4, 4);
-  R.bottomRightCorner<4, 4>() = 1e2 * Eigen::MatrixXd::Identity(4, 4);
+  R.topLeftCorner<4, 4>() = 10 * Eigen::MatrixXd::Identity(4, 4);
+  R.bottomRightCorner<4, 4>() = 1e1 * Eigen::MatrixXd::Identity(4, 4);
 
   std::cout << "GOT Q and R." << std::endl;
 
@@ -447,7 +447,7 @@ std::unique_ptr<systems::AffineSystem<double>> StabilizingLQRControllerTrimPoint
       Q.topLeftCorner<1, 1>() = 0 * 10 * Eigen::MatrixXd::Identity(1, 1);  // do not punish X position
 
       Eigen::MatrixXd R = Eigen::MatrixXd::Identity(8, 8);
-      R.topLeftCorner<4, 4>() = 1e-8 * Eigen::MatrixXd::Identity(4, 4);
+      R.topLeftCorner<4, 4>() = 1 * Eigen::MatrixXd::Identity(4, 4);
       R.bottomRightCorner<4, 4>() = 1e2 * Eigen::MatrixXd::Identity(4, 4);
 
       std::cout << "GOT Q and R." << std::endl;
@@ -474,8 +474,8 @@ std::unique_ptr<systems::TimeVaryingAffineSystem<double>> TimeVaryingLinearQuadr
       Q.topLeftCorner<6, 6>() =  10 * Eigen::MatrixXd::Identity(6, 6);
 
       Eigen::MatrixXd R = Eigen::MatrixXd::Identity(8, 8);
-      R.topLeftCorner<4, 4>() = 1e-8 * Eigen::MatrixXd::Identity(4, 4);
-      R.bottomRightCorner<4, 4>() = 1e2 * Eigen::MatrixXd::Identity(4, 4);
+      R.topLeftCorner<4, 4>() = 1 * Eigen::MatrixXd::Identity(4, 4);
+      R.bottomRightCorner<4, 4>() = 5e2 * Eigen::MatrixXd::Identity(4, 4);
 
       std::cout << "GOT Q and R." << std::endl;
       const int num_inputs = quad_tilt_wing_plant->get_input_port(0).size(),

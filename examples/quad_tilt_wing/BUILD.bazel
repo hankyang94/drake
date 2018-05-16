@@ -111,6 +111,7 @@ drake_cc_binary(
         "//systems/primitives:constant_vector_source",
         "//systems/primitives:demultiplexer",
         "//systems/primitives:multiplexer",
+        "//systems/primitives:signal_logger",
         "@gflags",
     ],
 )
@@ -140,6 +141,37 @@ drake_cc_binary(
         "//systems/primitives:constant_vector_source",
         "//systems/primitives:demultiplexer",
         "//systems/primitives:multiplexer",
+        "//systems/primitives:signal_logger",
+        "@gflags",
+    ],
+)
+
+drake_cc_binary(
+    name = "run_quad_tilt_wing_lqr_80",
+    srcs = ["run_quad_tilt_wing_lqr_80.cc"],
+    add_test_rule = 1,
+    data = [":models"],
+    test_rule_args = [
+        "--simulation_trials=1",
+        "--simulation_real_time_rate=0.1",
+        "--trial_duration=1.0",
+    ],
+    test_rule_size = "medium",
+    deps = [
+        ":quad_tilt_wing_plant",
+        "//common:find_resource",
+        "//lcm",
+        "//multibody:rigid_body_tree",
+        "//multibody:rigid_body_tree_construction",
+        "//multibody/parsers",
+        "//multibody/rigid_body_plant",
+        "//multibody/rigid_body_plant:drake_visualizer",
+        "//systems/analysis:simulator",
+        "//systems/framework:diagram",
+        "//systems/primitives:constant_vector_source",
+        "//systems/primitives:demultiplexer",
+        "//systems/primitives:multiplexer",
+        "//systems/primitives:signal_logger",
         "@gflags",
     ],
 )
@@ -169,6 +201,7 @@ drake_cc_binary(
         "//systems/primitives:constant_vector_source",
         "//systems/primitives:demultiplexer",
         "//systems/primitives:multiplexer",
+        "//systems/primitives:signal_logger",
         "@gflags",
     ],
 )
@@ -198,6 +231,7 @@ drake_cc_binary(
         "//systems/primitives:constant_vector_source",
         "//systems/primitives:demultiplexer",
         "//systems/primitives:multiplexer",
+        "//systems/primitives:signal_logger",
         "@gflags",
     ],
 )
@@ -291,6 +325,7 @@ drake_cc_binary(
         "//systems/trajectory_optimization:direct_collocation",
         "//systems/trajectory_optimization:direct_transcription",
         "//solvers:ipopt_solver",
+        "//solvers:snopt_solver",
         "@gflags",
     ],
 )
@@ -326,13 +361,174 @@ drake_cc_binary(
         "//systems/primitives:time_varying_data",
         "//systems/primitives:piecewise_polynomial_affine_system",
         "//common/trajectories:piecewise_polynomial",
+        "//systems/primitives:signal_logger",
         "@gflags",
     ],
 )
 
 drake_cc_binary(
-    name = "run_quad_tilt_wing_traj_opt_snopt",
-    srcs = ["run_quad_tilt_wing_traj_opt_snopt.cc"],
+    name = "run_quad_tilt_wing_traj_opt_snopt_0mps_10mps",
+    srcs = ["run_quad_tilt_wing_traj_opt_snopt_0mps_10mps.cc"],
+    add_test_rule = 1,
+    data = [":models"],
+    test_rule_args = [
+        "--target_realtime_rate=1",
+    ],
+    test_rule_size = "medium",
+    deps = [
+        ":quad_tilt_wing_plant",
+        "//common:find_resource",
+        "//lcm",
+        "//multibody:rigid_body_tree",
+        "//multibody:rigid_body_tree_construction",
+        "//multibody/parsers",
+        "//multibody/rigid_body_plant",
+        "//multibody/rigid_body_plant:drake_visualizer",
+        "//systems/analysis:simulator",
+        "//systems/framework:diagram",
+        "//systems/primitives:constant_vector_source",
+        "//systems/primitives:demultiplexer",
+        "//systems/primitives:multiplexer",
+        "//systems/primitives:trajectory_source",
+        "//systems/trajectory_optimization:direct_collocation",
+        "//systems/trajectory_optimization:direct_transcription",
+        "//solvers:ipopt_solver",
+        "//solvers:snopt_solver",
+        "@gflags",
+    ],
+)
+
+drake_cc_binary(
+    name = "run_quad_tilt_wing_traj_opt_snopt_10mps_50mps",
+    srcs = ["run_quad_tilt_wing_traj_opt_snopt_10mps_50mps.cc"],
+    add_test_rule = 1,
+    data = [":models"],
+    test_rule_args = [
+        "--target_realtime_rate=1",
+    ],
+    test_rule_size = "medium",
+    deps = [
+        ":quad_tilt_wing_plant",
+        "//common:find_resource",
+        "//lcm",
+        "//multibody:rigid_body_tree",
+        "//multibody:rigid_body_tree_construction",
+        "//multibody/parsers",
+        "//multibody/rigid_body_plant",
+        "//multibody/rigid_body_plant:drake_visualizer",
+        "//systems/analysis:simulator",
+        "//systems/framework:diagram",
+        "//systems/primitives:constant_vector_source",
+        "//systems/primitives:demultiplexer",
+        "//systems/primitives:multiplexer",
+        "//systems/primitives:trajectory_source",
+        "//systems/trajectory_optimization:direct_collocation",
+        "//systems/trajectory_optimization:direct_transcription",
+        "//solvers:ipopt_solver",
+        "//solvers:snopt_solver",
+        "@gflags",
+    ],
+)
+
+drake_cc_binary(
+    name = "run_quad_tilt_wing_traj_opt_snopt_0mps_50mps",
+    srcs = ["run_quad_tilt_wing_traj_opt_snopt_0mps_50mps.cc"],
+    add_test_rule = 1,
+    data = [":models"],
+    test_rule_args = [
+        "--target_realtime_rate=1",
+    ],
+    test_rule_size = "medium",
+    deps = [
+        ":quad_tilt_wing_plant",
+        "//common:find_resource",
+        "//lcm",
+        "//multibody:rigid_body_tree",
+        "//multibody:rigid_body_tree_construction",
+        "//multibody/parsers",
+        "//multibody/rigid_body_plant",
+        "//multibody/rigid_body_plant:drake_visualizer",
+        "//systems/analysis:simulator",
+        "//systems/framework:diagram",
+        "//systems/primitives:constant_vector_source",
+        "//systems/primitives:demultiplexer",
+        "//systems/primitives:multiplexer",
+        "//systems/primitives:trajectory_source",
+        "//systems/trajectory_optimization:direct_collocation",
+        "//systems/trajectory_optimization:direct_transcription",
+        "//solvers:ipopt_solver",
+        "//solvers:snopt_solver",
+        "@gflags",
+    ],
+)
+
+drake_cc_binary(
+    name = "run_quad_tilt_wing_traj_opt_snopt_0mps_100mps",
+    srcs = ["run_quad_tilt_wing_traj_opt_snopt_0mps_100mps.cc"],
+    add_test_rule = 1,
+    data = [":models"],
+    test_rule_args = [
+        "--target_realtime_rate=1",
+    ],
+    test_rule_size = "medium",
+    deps = [
+        ":quad_tilt_wing_plant",
+        "//common:find_resource",
+        "//lcm",
+        "//multibody:rigid_body_tree",
+        "//multibody:rigid_body_tree_construction",
+        "//multibody/parsers",
+        "//multibody/rigid_body_plant",
+        "//multibody/rigid_body_plant:drake_visualizer",
+        "//systems/analysis:simulator",
+        "//systems/framework:diagram",
+        "//systems/primitives:constant_vector_source",
+        "//systems/primitives:demultiplexer",
+        "//systems/primitives:multiplexer",
+        "//systems/primitives:trajectory_source",
+        "//systems/trajectory_optimization:direct_collocation",
+        "//systems/trajectory_optimization:direct_transcription",
+        "//solvers:ipopt_solver",
+        "//solvers:snopt_solver",
+        "@gflags",
+    ],
+)
+
+drake_cc_binary(
+    name = "run_quad_tilt_wing_traj_opt_snopt_100mps_0mps",
+    srcs = ["run_quad_tilt_wing_traj_opt_snopt_100mps_0mps.cc"],
+    add_test_rule = 1,
+    data = [":models"],
+    test_rule_args = [
+        "--target_realtime_rate=1",
+    ],
+    test_rule_size = "medium",
+    deps = [
+        ":quad_tilt_wing_plant",
+        "//common:find_resource",
+        "//lcm",
+        "//multibody:rigid_body_tree",
+        "//multibody:rigid_body_tree_construction",
+        "//multibody/parsers",
+        "//multibody/rigid_body_plant",
+        "//multibody/rigid_body_plant:drake_visualizer",
+        "//systems/analysis:simulator",
+        "//systems/framework:diagram",
+        "//systems/primitives:constant_vector_source",
+        "//systems/primitives:demultiplexer",
+        "//systems/primitives:multiplexer",
+        "//systems/primitives:trajectory_source",
+        "//systems/trajectory_optimization:direct_collocation",
+        "//systems/trajectory_optimization:direct_transcription",
+        "//solvers:ipopt_solver",
+        "//solvers:snopt_solver",
+        "@gflags",
+    ],
+)
+
+drake_cc_binary(
+    name = "run_quad_tilt_wing_traj_opt_snopt_pitch_up_deaccelerate",
+    srcs = ["run_quad_tilt_wing_traj_opt_snopt_pitch_up_deaccelerate.cc"],
     add_test_rule = 1,
     data = [":models"],
     test_rule_args = [
@@ -396,8 +592,8 @@ drake_cc_binary(
 
 
 drake_cc_binary(
-    name = "run_quad_tilt_wing_traj_opt_snopt_turn",
-    srcs = ["run_quad_tilt_wing_traj_opt_snopt_turn.cc"],
+    name = "run_quad_tilt_wing_traj_opt_snopt_turn_10mps",
+    srcs = ["run_quad_tilt_wing_traj_opt_snopt_turn_10mps.cc"],
     add_test_rule = 1,
     data = [":models"],
     test_rule_args = [
@@ -426,6 +622,71 @@ drake_cc_binary(
         "@gflags",
     ],
 )
+
+drake_cc_binary(
+    name = "run_quad_tilt_wing_traj_opt_snopt_turn_50mps",
+    srcs = ["run_quad_tilt_wing_traj_opt_snopt_turn_50mps.cc"],
+    add_test_rule = 1,
+    data = [":models"],
+    test_rule_args = [
+        "--target_realtime_rate=1",
+    ],
+    test_rule_size = "medium",
+    deps = [
+        ":quad_tilt_wing_plant",
+        "//common:find_resource",
+        "//lcm",
+        "//multibody:rigid_body_tree",
+        "//multibody:rigid_body_tree_construction",
+        "//multibody/parsers",
+        "//multibody/rigid_body_plant",
+        "//multibody/rigid_body_plant:drake_visualizer",
+        "//systems/analysis:simulator",
+        "//systems/framework:diagram",
+        "//systems/primitives:constant_vector_source",
+        "//systems/primitives:demultiplexer",
+        "//systems/primitives:multiplexer",
+        "//systems/primitives:trajectory_source",
+        "//systems/trajectory_optimization:direct_collocation",
+        "//systems/trajectory_optimization:direct_transcription",
+        "//solvers:ipopt_solver",
+        "//solvers:snopt_solver",
+        "@gflags",
+    ],
+)
+
+drake_cc_binary(
+    name = "run_quad_tilt_wing_traj_opt_snopt_roll",
+    srcs = ["run_quad_tilt_wing_traj_opt_snopt_roll.cc"],
+    add_test_rule = 1,
+    data = [":models"],
+    test_rule_args = [
+        "--target_realtime_rate=1",
+    ],
+    test_rule_size = "medium",
+    deps = [
+        ":quad_tilt_wing_plant",
+        "//common:find_resource",
+        "//lcm",
+        "//multibody:rigid_body_tree",
+        "//multibody:rigid_body_tree_construction",
+        "//multibody/parsers",
+        "//multibody/rigid_body_plant",
+        "//multibody/rigid_body_plant:drake_visualizer",
+        "//systems/analysis:simulator",
+        "//systems/framework:diagram",
+        "//systems/primitives:constant_vector_source",
+        "//systems/primitives:demultiplexer",
+        "//systems/primitives:multiplexer",
+        "//systems/primitives:trajectory_source",
+        "//systems/trajectory_optimization:direct_collocation",
+        "//systems/trajectory_optimization:direct_transcription",
+        "//solvers:ipopt_solver",
+        "//solvers:snopt_solver",
+        "@gflags",
+    ],
+)
+
 
 install_data()
 add_lint_tests()

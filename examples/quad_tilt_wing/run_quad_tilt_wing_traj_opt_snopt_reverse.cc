@@ -66,21 +66,20 @@ int DoMain() {
   // Add bounds to the inputs
 //   const double kPI = 3.1415926;
   const solvers::VectorXDecisionVariable& u = dirtran.input();
-  const double kProp = quad_tilt_wing_plant -> kProp();
   const double UAV_fg = quad_tilt_wing_plant -> m() * quad_tilt_wing_plant -> g();
-  const double kPropSpeedLowerLimit = 100;
-  const double kPropSpeedUpperLimit = UAV_fg / 2.0 / kProp;
+  const double kThrustLowerLimit = 0.0;
+  const double kThrustUpperLimit = UAV_fg / 2.0;
   std::cout << "M_PI: " << M_PI << std::endl;
   const double kTiltUpperLimit = 0.1;
   const double kTiltLowerLimit = - 0.51 * M_PI;
-  dirtran.AddConstraintToAllKnotPoints(u(0) >= kPropSpeedLowerLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(0) <= kPropSpeedUpperLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(1) >= kPropSpeedLowerLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(1) <= kPropSpeedUpperLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(2) >= kPropSpeedLowerLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(2) <= kPropSpeedUpperLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(3) >= kPropSpeedLowerLimit);
-  dirtran.AddConstraintToAllKnotPoints(u(3) <= kPropSpeedUpperLimit);
+  dirtran.AddConstraintToAllKnotPoints(u(0) >= kThrustLowerLimit);
+  dirtran.AddConstraintToAllKnotPoints(u(0) <= kThrustUpperLimit);
+  dirtran.AddConstraintToAllKnotPoints(u(1) >= kThrustLowerLimit);
+  dirtran.AddConstraintToAllKnotPoints(u(1) <= kThrustUpperLimit);
+  dirtran.AddConstraintToAllKnotPoints(u(2) >= kThrustLowerLimit);
+  dirtran.AddConstraintToAllKnotPoints(u(2) <= kThrustUpperLimit);
+  dirtran.AddConstraintToAllKnotPoints(u(3) >= kThrustLowerLimit);
+  dirtran.AddConstraintToAllKnotPoints(u(3) <= kThrustUpperLimit);
   dirtran.AddConstraintToAllKnotPoints(u(4) >= kTiltLowerLimit);
   dirtran.AddConstraintToAllKnotPoints(u(4) <= kTiltUpperLimit);
   dirtran.AddConstraintToAllKnotPoints(u(5) >= kTiltLowerLimit);
@@ -99,18 +98,18 @@ int DoMain() {
   const double kXLowerLimit = -5.0;
   const double kXUpperLimit = 2000.0;
   const double kYLimit = 1e-6;
-  const double kZLowerLimit = 10.0-1e-6;
-  const double kZUpperLimit = 10.0+1e-6;
+  const double kZLowerLimit = 10.0-1000;
+  const double kZUpperLimit = 10.0+1000;
   const double kPhiLimit = 1e-6;
-  const double kThetaLimit = 1e-6;
+  const double kThetaLimit = 0.1;
   const double kPsiLimit = 1e-6;
   // velocity constriants, very high bound
   const double kXDotLowerLimit = -5.0;
   const double kXDotUpperLimit = 120.0;
   const double kYDotLimit = 1e-6;
-  const double kZDotLimit = 1e-6;
+  const double kZDotLimit = 2;
   const double kPhiDotLimit = 1e-6;
-  const double kThetaDotLimit = 1e-6;
+  const double kThetaDotLimit = 0.1;
   const double kPsiDotLimit = 1e-6;
   const solvers::VectorXDecisionVariable& x = dirtran.state();
 
@@ -154,8 +153,8 @@ int DoMain() {
   // Add initial input constraint
   Eigen::VectorXd initial_input(8);
 //   final_input << 8297.58, 8297.58, 8288.65, 8288.6, -0.0283086, -0.0283086, -0.00999118, -0.00999118;  // for 50m/s
-  initial_input << 1970.68, 1970.68, 1970.54, 1970.54, -0.00707841, -0.00707841, -0.00249764, -0.00249764;  // for 100m/s
-  const double kSlack_u_N_prop = 5;
+  initial_input << 0.0104247, 0.0104247, 0.010424, 0.010424, -0.00707774, -0.00707774, -0.00249736, -0.00249737;  // for 100m/s
+  const double kSlack_u_N_prop = 1e-4;
   const double kSlack_u_N_tilt = 1e-4;
   Eigen::VectorBlock<const solvers::VectorXDecisionVariable> u_0 = dirtran.input(0);
   for (int i = 0; i < 4; i++) {
@@ -170,9 +169,9 @@ int DoMain() {
 
   // Add final state constraint
   Eigen::VectorXd final_state = Eigen::VectorXd::Zero(12);
-  final_state(0) = 500; // for initial guess
-  final_state(2) = 10.0; // Z_0, start at height 10m, all the other states are 0
-  dirtran.AddLinearConstraint(dirtran.final_state().tail(11) == final_state.tail(11));
+  final_state(0) = 2000; // for initial guess
+  final_state(2) = 100.0; // Z_0, start at height 10m, all the other states are 0
+  dirtran.AddLinearConstraint(dirtran.final_state().tail(9) == final_state.tail(9));
 
   std::cout << "final state: " << final_state << std::endl;
 
@@ -182,8 +181,7 @@ int DoMain() {
   const double rear_moment_arm = quad_tilt_wing_plant->rear_joint_x();
   const double front_prop_f = UAV_fg/(rear_moment_arm + front_moment_arm) * rear_moment_arm / 2.0;
   const double rear_prop_f = UAV_fg/(rear_moment_arm + front_moment_arm) * front_moment_arm / 2.0;
-  Eigen::Vector4d uN_prop{front_prop_f/kProp, front_prop_f/kProp,
-      rear_prop_f/kProp, rear_prop_f/kProp};
+  Eigen::Vector4d uN_prop{front_prop_f, front_prop_f, rear_prop_f, rear_prop_f};
   Eigen::VectorXd final_input = Eigen::VectorXd::Zero(8);
   final_input.topRows(4) = uN_prop;
   final_input.bottomRows(4) = Eigen::VectorXd::Constant(4, final_tilt_angle);
@@ -224,8 +222,14 @@ int DoMain() {
 
   // Set solver options
   solvers::SnoptSolver solver;
-  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Major print_level", 2);
-  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Print file", "/home/klytech/solver_output/traj_opt_100mps_reverse_snopt.txt");
+  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Major print level", 4);
+  dirtran.SetSolverOption(solvers::SnoptSolver::id(),
+                          "Print file", "/Users/Hank/solver_output/transform_100mps_reverse_snopt.txt");
+//  dirtran.SetSolverOption(solvers::SnoptSolver::id(),
+//                          "Print file", "/home/klytech/solver_output/traj_opt_100mps_reverse_snopt.txt");
+//  solvers::IpoptSolver solver;
+//  const double tol = 1e-4;
+//  dirtran.SetSolverOption(solvers::IpoptSolver::id(), "print_level", 5);
 //  dirtran.SetSolverOption(solvers::IpoptSolver::id(), "print_user_options", "yes");
 //  dirtran.SetSolverOption(solvers::IpoptSolver::id(), "max_iter", 1000);
 //  dirtran.SetSolverOption(solvers::IpoptSolver::id(), "constr_viol_tol", tol);
@@ -237,7 +241,7 @@ int DoMain() {
 //  dirtran.SetSolverOption(solvers::IpoptSolver::id(), "tol", tol);
 //  dirtran.SetSolverOption(solvers::IpoptSolver::id(), "output_file", "/home/klytech/solver_output/traj_opt_100mps.txt");
   //~ dirtran.SetSolverOption(solvers::IpoptSolver::id(), "output_file", "/home/hank/solver_output/traj_opt_100mps.txt");
-//  dirtran.SetSolverOption(solvers::IpoptSolver::id(), "output_file", "/Users/Hank/solver_output/traj_opt_100mps.txt");
+//  dirtran.SetSolverOption(solvers::IpoptSolver::id(), "output_file", "/Users/Hank/solver_output/traj_opt_ipopt_100mps.txt");
 
   SolutionResult result = solver.Solve(dirtran);
 
@@ -258,7 +262,8 @@ int DoMain() {
   std::cout << "u_samples: " << u_samples << std::endl;
   std::cout << "x_samples: " << x_samples << std::endl;
 
-  std::ofstream file("/home/klytech/solver_output/traj_opt_sol_100mps_snopt_reverse_py.txt");
+//  std::ofstream file("/home/klytech/solver_output/traj_opt_sol_100mps_snopt_reverse_py.txt");
+  std::ofstream file("/Users/Hank/solver_output/transform_sol_100mps_snopt_reverse_py.txt");
 //  std::ofstream file("/home/hank/solver_output/traj_opt_sol_100mps_py.txt");
 //  std::ofstream file(
 //          "/Users/Hank/Dropbox (MIT)/Courses/6.832 Underactuated Robotics/Final Project/code/solver_output/traj_opt_sol_100mps_py");

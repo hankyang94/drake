@@ -23,6 +23,7 @@
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/primitives/multiplexer.h"
 #include "drake/systems/primitives/demultiplexer.h"
+#include "drake/systems/primitives/signal_logger.h"
 
 DEFINE_int32(simulation_trials, 1, "Number of trials to simulate.");
 DEFINE_double(simulation_real_time_rate, 1, "Real time rate");
@@ -104,6 +105,14 @@ int do_main() {
   // connect mux to visualizer
   builder.Connect(mux->get_output_port(0), visualizer->get_input_port(0));
 
+  auto state_log =
+          builder.AddSystem<drake::systems::SignalLogger<double>>(12);
+  auto control_log =
+          builder.AddSystem<drake::systems::SignalLogger<double>>(8);
+
+  builder.Connect(quad_tilt_wing_plant->get_output_port(0), state_log->get_input_port());
+  builder.Connect(controller->get_output_port(), control_log->get_input_port());
+
   auto diagram = builder.Build();
 
   std::cout << "System Built" << std::endl;
@@ -141,17 +150,19 @@ int do_main() {
     simulator.set_target_realtime_rate(FLAGS_simulation_real_time_rate);
     simulator.StepTo(FLAGS_trial_duration);
 
-    //~ // Goal state verification.
-    //~ const Context<double>& context = simulator.get_context();
-    //~ const ContinuousState<double>& state = context.get_continuous_state();
-    //~ const VectorX<double>& position_vector = state.CopyToVector();
+    std::ofstream state_file("/Users/Hank/solver_output/lqr_wingtilt_log_state.txt");
+    std::ofstream control_file("/Users/Hank/solver_output/lqr_wingtilt_log_control.txt");
+    std::ofstream time_file("/Users/Hank/solver_output/lqr_wingtilt_log_time.txt");
 
-    //~ if (!is_approx_equal_abstol(
-        //~ position_vector, kNominalState, 1e-4)) {
-      //~ throw std::runtime_error("Target state is not achieved.");
-    //~ }
-
-    simulator.reset_context(std::move(diagram_context));
+    if (state_file.is_open()) {
+      state_file << state_log->data() << '\n';
+    }
+    if (control_file.is_open()) {
+      control_file << control_log->data() << '\n';
+    }
+    if (time_file.is_open()) {
+      time_file << state_log->sample_times() << '\n';
+    }
   }
   return 0;
 }

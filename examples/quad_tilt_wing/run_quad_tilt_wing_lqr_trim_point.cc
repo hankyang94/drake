@@ -23,9 +23,10 @@
 #include "drake/systems/framework/diagram_builder.h"
 #include "drake/systems/primitives/multiplexer.h"
 #include "drake/systems/primitives/demultiplexer.h"
+#include "drake/systems/primitives/signal_logger.h"
 
 DEFINE_int32(simulation_trials, 1, "Number of trials to simulate.");
-DEFINE_double(simulation_real_time_rate, 0.1, "Real time rate");
+DEFINE_double(simulation_real_time_rate, 1.0, "Real time rate");
 DEFINE_double(trial_duration, 10, "Duration of execution of each trial");
 
 namespace drake {
@@ -55,7 +56,7 @@ int do_main() {
   Eigen::VectorXd kNominalState(12);
   kNominalState << 0, 0, 10, 0, 0, 0, 100, 0, 0, 0, 0, 0;  // stay at 10m height and keep 100m/s
   Eigen::VectorXd kNominalInput(8);
-  kNominalInput << 1970.68, 1970.68, 1970.54, 1970.54, -0.00707841, -0.00707841, -0.00249764, -0.00249764; // this is got from the fixed point program
+  kNominalInput << 0.0104247, 0.0104247, 0.010424, 0.010424, -0.00707774, -0.00707774, -0.00249736, -0.00249737; // this is got from the fixed point program
 
   auto quad_tilt_wing_plant = builder.AddSystem<QuadTiltWingPlant<double>>();
   quad_tilt_wing_plant->set_name("quad_tilt_wing_plant");
@@ -104,17 +105,26 @@ int do_main() {
   // connect mux to visualizer
   builder.Connect(mux->get_output_port(0), visualizer->get_input_port(0));
 
+  // Add state and control log
+  auto state_log =
+          builder.AddSystem<drake::systems::SignalLogger<double>>(12);
+  auto control_log =
+          builder.AddSystem<drake::systems::SignalLogger<double>>(8);
+
+  builder.Connect(quad_tilt_wing_plant->get_output_port(0), state_log->get_input_port());
+  builder.Connect(controller->get_output_port(), control_log->get_input_port());
+
   auto diagram = builder.Build();
 
   std::cout << "System Built" << std::endl;
 
   Simulator<double> simulator(*diagram);
   VectorX<double> x0 = VectorX<double>::Zero(12);
-  x0(2) = 10;  //Z initial height
+  x0(2) = 9.0;  //Z initial height
   x0(3) = M_PI/20; // row angle
   x0(4) = M_PI/20;   // pitch angle
   x0(5) = M_PI/20; // yaw angle
-  x0(6) = 100;  // dot_x x direction speed
+  x0(6) = 95;  // dot_x x direction speed
   x0(7) = 0; // dot_y y direction speed
   x0(8) = 0;   // dot_z z direction speed
 
@@ -129,26 +139,23 @@ int do_main() {
     simulator.Initialize();
     simulator.set_target_realtime_rate(FLAGS_simulation_real_time_rate);
     simulator.StepTo(0.00001);
-    std::cout << "Pausing for 30 seconds, tune the visualizer please." << std::endl;
-    sleep(10);
-    std::cout << "20s left." << std::endl;
-    sleep(10);
-    std::cout << "10s left." << std::endl;
-    sleep(10);
-    std::cout << "Simulation starts!" << std::endl;
+    std::cout << "Pausing for 15 seconds, tune the visualizer please." << std::endl;
+    sleep(15);
     simulator.StepTo(FLAGS_trial_duration);
 
-    //~ // Goal state verification.
-    //~ const Context<double>& context = simulator.get_context();
-    //~ const ContinuousState<double>& state = context.get_continuous_state();
-    //~ const VectorX<double>& position_vector = state.CopyToVector();
+    std::ofstream state_file("/Users/Hank/solver_output/lqr_trim_100mps_log_state.txt");
+    std::ofstream control_file("/Users/Hank/solver_output/lqr_trim_100mps_log_control.txt");
+    std::ofstream time_file("/Users/Hank/solver_output/lqr_trim_100mps_log_time.txt");
 
-    //~ if (!is_approx_equal_abstol(
-        //~ position_vector, kNominalState, 1e-4)) {
-      //~ throw std::runtime_error("Target state is not achieved.");
-    //~ }
-
-    simulator.reset_context(std::move(diagram_context));
+    if (state_file.is_open()) {
+      state_file << state_log->data() << '\n';
+    }
+    if (control_file.is_open()) {
+      control_file << control_log->data() << '\n';
+    }
+    if (time_file.is_open()) {
+      time_file << state_log->sample_times() << '\n';
+    }
   }
   return 0;
 }
