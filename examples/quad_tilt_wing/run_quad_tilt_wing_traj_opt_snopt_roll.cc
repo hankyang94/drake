@@ -56,9 +56,9 @@ int DoMain() {
 
   auto context = quad_tilt_wing_plant.get()->CreateDefaultContext();
 
-  const int kNumTimeSamples = 61;
-  const double kMinimumTimeStep = 0.2;
-  const double kMaximumTimeStep = 0.4;
+  const int kNumTimeSamples = 81;
+  const double kMinimumTimeStep = 0.1;
+  const double kMaximumTimeStep = 0.2;
   systems::trajectory_optimization::DirectCollocation dirtran(
       quad_tilt_wing_plant.get(), *context, kNumTimeSamples, kMinimumTimeStep, kMaximumTimeStep);
 
@@ -95,22 +95,22 @@ int DoMain() {
   const double kXUpperLimit = 1000.0;
   const double kYPosLimit = 1000.0;
   const double kYNegLimit = -100;
-  const double kZLowerLimit = 0.0;
-  const double kZUpperLimit = 20.0;
-  const double kPhiNegLimit = -M_PI/3.0;
-  const double kPhiPosLimit = M_PI/3.0;
-  const double kThetaNegLimit = -M_PI/100.0;
-  const double kThetaPosLimit = M_PI/100.0;
-  const double kPsiNegLimit = -M_PI/100.0;
-  const double kPsiPosLimit = M_PI/100.0;
+  const double kZLowerLimit = -20;
+  const double kZUpperLimit = 100;
+  const double kPhiNegLimit = -2*M_PI;
+  const double kPhiPosLimit = 0;
+  const double kThetaNegLimit = -M_PI/6;
+  const double kThetaPosLimit = M_PI/6;
+  const double kPsiNegLimit = -M_PI/50.0;
+  const double kPsiPosLimit = M_PI/50.0;
   // velocity constraints, very high bound
-  const double kXDotLowerLimit = 5;
-  const double kXDotUpperLimit = 20;
-  const double kYDotLimit = 30;
+  const double kXDotLowerLimit = 2;
+  const double kXDotUpperLimit = 100;
+  const double kYDotLimit = 50;
   const double kZDotLimit = 10;
-  const double kPhiDotLimit = M_PI/40.0;
-  const double kThetaDotLimit = M_PI/100.0;
-  const double kPsiDotLimit = M_PI/100.0;
+  const double kPhiDotLimit = M_PI/4.0;
+  const double kThetaDotLimit = M_PI/50.0;
+  const double kPsiDotLimit = M_PI/50.0;
   const solvers::VectorXDecisionVariable& x = dirtran.state();
 
   std::cout << "x state size: " << x.size() << std::endl;
@@ -155,7 +155,7 @@ int DoMain() {
   dirtran.AddLinearConstraint(u_0 == initial_input);
 
   // Add tilt-speed limit constraint
-  const double kTiltSpeedLimit = M_PI / 60.0; // limit the tilting speed
+  const double kTiltSpeedLimit = M_PI / 30.0; // limit the tilting speed
   for (int i=1; i<(kNumTimeSamples); i++){
     dirtran.AddLinearConstraint(dirtran.input(i).segment(4,1) - dirtran.input(i-1).segment(4,1) >= -kTiltSpeedLimit*dirtran.timestep(i-1));
     dirtran.AddLinearConstraint(dirtran.input(i).segment(4,1) - dirtran.input(i-1).segment(4,1) <= kTiltSpeedLimit*dirtran.timestep(i-1));
@@ -165,10 +165,10 @@ int DoMain() {
 
   // Add final state constraint
   Eigen::VectorXd final_state = Eigen::VectorXd::Zero(12);
-  final_state(0) = 200.0;  // for initial guess
-  final_state(1) = 100.0;  // for initial guess
+  final_state(0) = 100.0;  // for initial guess
+  final_state(1) = 10.0;  // for initial guess
   final_state(2) = kZHover; // Z_N, try keeping the same height at final state
-  final_state(3) = 0.0;
+  final_state(3) = 0;
   final_state(5) = 0.0;
   final_state(6) = 10.0;
   dirtran.AddLinearConstraint(dirtran.final_state().tail(9) == final_state.tail(9));
@@ -176,24 +176,24 @@ int DoMain() {
   std::cout << "final state: " << final_state << std::endl;
 
   // Add mid state
-  Eigen::VectorBlock<const solvers::VectorXDecisionVariable> x_mid_1 = dirtran.state((kNumTimeSamples-1)/4);
-  dirtran.AddLinearConstraint(x_mid_1(3) == -M_PI/9);
+  Eigen::VectorBlock<const solvers::VectorXDecisionVariable> x_mid_1 = dirtran.state((kNumTimeSamples-1)/2);
+  dirtran.AddLinearConstraint(x_mid_1(3) == -M_PI/3);
   Eigen::VectorXd x_mid_1_guess(12);
-  x_mid_1_guess << 50.0, 30, 10, -M_PI/9, 0.0, 0.0, 10.0, 5.0, 0.0, 0.0, 0.0, 0.0;
+  x_mid_1_guess << 10.0, 30, 10, -M_PI/9, 0.0, 0.0, 10.0, 5.0, 0.0, 0.0, 0.0, 0.0;
 
-  Eigen::VectorBlock<const solvers::VectorXDecisionVariable> x_mid_2 = dirtran.state((kNumTimeSamples-1)/2);
-  dirtran.AddLinearConstraint(x_mid_2(3) == 0.0);
-  Eigen::VectorXd x_mid_2_guess(12);
-  x_mid_2_guess << 100.0, 60.0, 10.0, 0.0, 0.0, 0.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0;
-
-  Eigen::VectorBlock<const solvers::VectorXDecisionVariable> x_mid_3 = dirtran.state((kNumTimeSamples-1)/4*3);
-  dirtran.AddLinearConstraint(x_mid_3(3) == M_PI/9);
-  Eigen::VectorXd x_mid_3_guess(12);
-  x_mid_3_guess << 150.0, 90.0, 10.0, M_PI/9, 0.0, 0.0, 10.0, 5.0, 0.0, 0.0, 0.0, 0.0;
+//  Eigen::VectorBlock<const solvers::VectorXDecisionVariable> x_mid_2 = dirtran.state((kNumTimeSamples-1)/2);
+//  dirtran.AddLinearConstraint(x_mid_2(3) == 0.0);
+//  Eigen::VectorXd x_mid_2_guess(12);
+//  x_mid_2_guess << 100.0, 60.0, 10.0, 0.0, 0.0, 0.0, 10.0, 10.0, 0.0, 0.0, 0.0, 0.0;
+//
+//  Eigen::VectorBlock<const solvers::VectorXDecisionVariable> x_mid_3 = dirtran.state((kNumTimeSamples-1)/4*3);
+//  dirtran.AddLinearConstraint(x_mid_3(3) == M_PI/9);
+//  Eigen::VectorXd x_mid_3_guess(12);
+//  x_mid_3_guess << 150.0, 90.0, 10.0, M_PI/9, 0.0, 0.0, 10.0, 5.0, 0.0, 0.0, 0.0, 0.0;
 
   // Add final input constraint
   Eigen::VectorXd final_input(8);
-  final_input << 1.04137, 1.04137, 0.847701, 0.847701, -0.64799, -0.64799, -0.244268, -0.244268;  // for 100m/s
+  final_input << 1.04137, 1.04137, 0.847701, 0.847701, -0.64799, -0.64799, -0.244268, -0.244268;  // for 10m/s
   const double kSlack_u_N_prop = 1e-4;
   const double kSlack_u_N_tilt = 1e-4;
   Eigen::VectorBlock<const solvers::VectorXDecisionVariable> u_N = dirtran.input(kNumTimeSamples-1);
@@ -211,18 +211,20 @@ int DoMain() {
   for (int i = 0; i < 4; i++) {
       dirtran.AddRunningCost(R_prop * u(i) * u(i));
   }
-  const double R_tilt = 0;  // Cost on input "effort".
+  const double R_tilt = 0.1;  // Cost on input "effort".
   for (int i = 4; i < 8; i++) {
       dirtran.AddRunningCost(R_tilt * u(i) * u(i));
   }
+//  const double R_pitch = 1;
+//  dirtran.AddRunningCost(R_pitch*x(4)*x(4));
 
   std::cout << "Finished adding all constraints and costs." << std::endl;
 
   // set initial guess
   const double timespan_init = (kNumTimeSamples - 1) * (kMinimumTimeStep + kMaximumTimeStep) / 2.0;
   auto traj_init_x = PiecewisePolynomial<double>::FirstOrderHold(
-      {0, timespan_init/4.0, timespan_init/2.0, timespan_init/4.0*3.0, timespan_init},
-              {initial_state, x_mid_1_guess, x_mid_2_guess, x_mid_3_guess, final_state});
+      {0, timespan_init/2, timespan_init},
+              {initial_state, x_mid_1_guess, final_state});
   auto initial_input_guess = initial_input;
   auto final_input_guess = final_input;
   auto traj_init_u = PiecewisePolynomial<double>::FirstOrderHold(
@@ -237,8 +239,9 @@ int DoMain() {
 //  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Major iterations limit", 1e3);
 //  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Minor iterations limit", 1e3);
 //  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Print file", "/home/klytech/solver_output/traj_opt_100mps_snopt_turn.txt");
-  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Scale option", 0);
-  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Print file", "/Users/Hank/solver_output/traj_opt_10mps_snopt_roll.txt");
+  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Scale option", 2);
+  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Iteration limit", 256000);
+  dirtran.SetSolverOption(solvers::SnoptSolver::id(), "Print file", "/home/klytech/solver_output/traj_opt_snopt_roll.txt");
 
 
   SolutionResult result = solver.Solve(dirtran);
@@ -261,7 +264,7 @@ int DoMain() {
   std::cout << "x_samples: " << x_samples << std::endl;
 
 //  std::ofstream file("/home/klytech/solver_output/traj_opt_sol_100mps_snopt_turn_py.txt");
-  std::ofstream file("/Users/Hank/solver_output/traj_opt_sol_10mps_snopt_roll_py.txt");
+  std::ofstream file("/home/klytech/solver_output/traj_opt_snopt_roll_py.txt");
   if (file.is_open()) {
     file << "t samples: " << '\n';
     file << t_samples << '\n';
@@ -314,9 +317,9 @@ int DoMain() {
   simulator.set_target_realtime_rate(FLAGS_target_realtime_rate);
   simulator.Initialize();
   simulator.StepTo(0.01);
-  std::cout << "Pausing for 30 seconds, tune the visualizer please." << std::endl;
+  std::cout << "Pausing for 5 seconds, tune the visualizer please." << std::endl;
 
-  sleep(15);
+  sleep(5);
 
   simulator.StepTo(pp_xtraj.end_time());
   std::cout << "Simulation Done." << std::endl;
