@@ -29,6 +29,7 @@
 #include "drake/solvers/ipopt_solver.h"
 #include "drake/common/trajectories/piecewise_polynomial.h"
 #include "drake/systems/primitives/signal_logger.h"
+#include "drake/systems/primitives/saturation.h"
 
 using drake::solvers::SolutionResult;
 
@@ -182,9 +183,20 @@ int DoMain() {
           quad_tilt_wing_plant, u_traj, x_traj));
   controller->set_name("controller");
 
-//  connect dynamics ports
+  Eigen::VectorXd control_min(8);
+  control_min.head(4) = Eigen::VectorXd::Zero(4);
+  control_min.tail(4) = Eigen::VectorXd::Constant(4, -0.6*M_PI);
+  const double UAV_fg = quad_tilt_wing_plant->m() * quad_tilt_wing_plant->g();
+  Eigen::VectorXd control_max(8);
+  control_max.head(4) = Eigen::VectorXd::Constant(4, UAV_fg/2.0);
+  control_max.tail(4) = Eigen::VectorXd::Constant(4, 0.1*PI);
+
+  auto saturation = builder.AddSystem<systems::Saturation<double>>(control_min, control_max);
+
+  //  connect dynamics ports
   builder.Connect(quad_tilt_wing_plant->get_output_port(0), controller->get_input_port());
-  builder.Connect(controller->get_output_port(), quad_tilt_wing_plant->get_input_port(0));
+  builder.Connect(controller->get_output_port(), saturation->get_input_port());
+  builder.Connect(saturation->get_output_port(), quad_tilt_wing_plant->get_input_port(0));
 
   // Setup mux and demux for plant, controller, and publisher
   auto plant_demux = builder.AddSystem<drake::systems::Demultiplexer<double>>(12, 6);
@@ -198,7 +210,7 @@ int DoMain() {
 
   // Demux plant and controller
   builder.Connect(quad_tilt_wing_plant->get_output_port(0), plant_demux->get_input_port(0));
-  builder.Connect(controller->get_output_port(), controller_demux->get_input_port(0));
+  builder.Connect(saturation->get_output_port(), controller_demux->get_input_port(0));
   // Mux demuxed signals to mux
   builder.Connect(plant_demux->get_output_port(0), mux->get_input_port(0));
   builder.Connect(controller_demux->get_output_port(1), mux->get_input_port(1));
@@ -213,7 +225,7 @@ int DoMain() {
           builder.AddSystem<drake::systems::SignalLogger<double>>(8);
 
   builder.Connect(quad_tilt_wing_plant->get_output_port(0), state_log->get_input_port());
-  builder.Connect(controller->get_output_port(), control_log->get_input_port());
+  builder.Connect(saturation->get_output_port(), control_log->get_input_port());
 
   auto diagram = builder.Build();
 
