@@ -24,10 +24,11 @@
 #include "drake/systems/primitives/multiplexer.h"
 #include "drake/systems/primitives/demultiplexer.h"
 #include "drake/systems/primitives/signal_logger.h"
+#include "drake/systems/primitives/saturation.h"
 
 DEFINE_int32(simulation_trials, 1, "Number of trials to simulate.");
 DEFINE_double(simulation_real_time_rate, 1, "Real time rate");
-DEFINE_double(trial_duration, 10, "Duration of execution of each trial");
+DEFINE_double(trial_duration, 20, "Duration of execution of each trial");
 
 namespace drake {
 using systems::DiagramBuilder;
@@ -82,6 +83,16 @@ int do_main() {
   auto mux = builder.AddSystem<drake::systems::Multiplexer<double>>(std::vector<int> {6,4,6,4});
   mux->set_name("mux");
 
+  Eigen::VectorXd control_min(8);
+  control_min.head(4) = Eigen::VectorXd::Zero(4);
+  control_min.tail(4) = Eigen::VectorXd::Constant(4, -0.8*M_PI);
+  const double UAV_fg = quad_tilt_wing_plant->m() * quad_tilt_wing_plant->g();
+  Eigen::VectorXd control_max(8);
+  control_max.head(4) = Eigen::VectorXd::Constant(4, UAV_fg/2.0);
+  control_max.tail(4) = Eigen::VectorXd::Constant(4, 0.1*M_PI);
+
+  auto saturation = builder.AddSystem<systems::Saturation<double>>(control_min, control_max);
+
   //// check system input and output port sizes
   std::cout << "Plant output size: " << quad_tilt_wing_plant->get_output_port(0).size() << std::endl;
   std::cout << "Controller input size: " << controller->get_input_port().size() << std::endl;
@@ -92,11 +103,12 @@ int do_main() {
   std::cout << "mux output size: " << mux->get_output_port(0).size() << std::endl;
   // connect dynamics ports
   builder.Connect(quad_tilt_wing_plant->get_output_port(0), controller->get_input_port());
-  builder.Connect(controller->get_output_port(), quad_tilt_wing_plant->get_input_port(0));
+  builder.Connect(controller->get_output_port(), saturation->get_input_port());
+  builder.Connect(saturation->get_output_port(), quad_tilt_wing_plant->get_input_port(0));
   // demux plant into 6 and 6, first 6 is postion, second 6 is velocity
   builder.Connect(quad_tilt_wing_plant->get_output_port(0), plant_demux->get_input_port(0));
   // demux controller into 4 and 4, first 4 is prop speed^2, second 4 is tilting angle
-  builder.Connect(controller->get_output_port(), controller_demux->get_input_port(0));
+  builder.Connect(saturation->get_output_port(), controller_demux->get_input_port(0));
   // mux position, tilting angle, speed, ~ together, the fourth port of mux is not connected, because we dont care
   builder.Connect(plant_demux->get_output_port(0), mux->get_input_port(0));
   builder.Connect(controller_demux->get_output_port(1), mux->get_input_port(1));
@@ -111,7 +123,7 @@ int do_main() {
           builder.AddSystem<drake::systems::SignalLogger<double>>(8);
 
   builder.Connect(quad_tilt_wing_plant->get_output_port(0), state_log->get_input_port());
-  builder.Connect(controller->get_output_port(), control_log->get_input_port());
+  builder.Connect(saturation->get_output_port(), control_log->get_input_port());
 
   auto diagram = builder.Build();
 
@@ -119,12 +131,18 @@ int do_main() {
 
   Simulator<double> simulator(*diagram);
   VectorX<double> x0 = VectorX<double>::Zero(12);
+  x0(0) = 0.5;
+  x0(1) = 0.5;
   x0(2) = 0.5;  //Z initial height
   x0(3) = M_PI/6;
   x0(4) = M_PI/6;
   x0(5) = M_PI/6;
-  x0(6) = 0.5;  // dot_x x direction speed
-  x0(8) = 0;   // dot_z z direction speed
+  x0(6) = -0.5;  // dot_x x direction speed
+  x0(7) = 0.5;
+  x0(8) = -0.5;   // dot_z z direction speed
+  x0(9) = 0.5;
+  x0(10) = 0.5;
+  x0(11) = 0.5;
 
   const VectorX<double> kNominalState{((Eigen::VectorXd(12) << kNominalPosition,
   Eigen::VectorXd::Zero(9)).finished())};

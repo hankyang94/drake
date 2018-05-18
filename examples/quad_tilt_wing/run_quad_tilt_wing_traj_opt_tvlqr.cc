@@ -189,7 +189,7 @@ int DoMain() {
   const double UAV_fg = quad_tilt_wing_plant->m() * quad_tilt_wing_plant->g();
   Eigen::VectorXd control_max(8);
   control_max.head(4) = Eigen::VectorXd::Constant(4, UAV_fg/2.0);
-  control_max.tail(4) = Eigen::VectorXd::Constant(4, 0.1*PI);
+  control_max.tail(4) = Eigen::VectorXd::Constant(4, 0.1*M_PI);
 
   auto saturation = builder.AddSystem<systems::Saturation<double>>(control_min, control_max);
 

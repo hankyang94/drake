@@ -112,6 +112,7 @@ drake_cc_binary(
         "//systems/primitives:demultiplexer",
         "//systems/primitives:multiplexer",
         "//systems/primitives:signal_logger",
+        "//systems/primitives:saturation",
         "@gflags",
     ],
 )
@@ -142,6 +143,7 @@ drake_cc_binary(
         "//systems/primitives:demultiplexer",
         "//systems/primitives:multiplexer",
         "//systems/primitives:signal_logger",
+        "//systems/primitives:saturation",
         "@gflags",
     ],
 )
@@ -172,6 +174,7 @@ drake_cc_binary(
         "//systems/primitives:demultiplexer",
         "//systems/primitives:multiplexer",
         "//systems/primitives:signal_logger",
+        "//systems/primitives:saturation",
         "@gflags",
     ],
 )
@@ -202,6 +205,7 @@ drake_cc_binary(
         "//systems/primitives:demultiplexer",
         "//systems/primitives:multiplexer",
         "//systems/primitives:signal_logger",
+        "//systems/primitives:saturation",
         "@gflags",
     ],
 )
@@ -232,6 +236,7 @@ drake_cc_binary(
         "//systems/primitives:demultiplexer",
         "//systems/primitives:multiplexer",
         "//systems/primitives:signal_logger",
+        "//systems/primitives:saturation",
         "@gflags",
     ],
 )
@@ -394,7 +399,7 @@ drake_cc_binary(
         "//systems/primitives:piecewise_polynomial_affine_system",
         "//common/trajectories:piecewise_polynomial",
         "//systems/primitives:signal_logger",
-        "//systems/primitives:saturation"
+        "//systems/primitives:saturation",
         "@gflags",
     ],
 )
